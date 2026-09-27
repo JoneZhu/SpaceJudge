@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.3.0</string>
+	<key>CFBundleVersion</key>
+	<string>3</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>SpaceJudge only reads the names and sizes of items in a folder you choose (such as Desktop) to draw a space map. It does not read regular file contents, never changes or deletes files, and does not upload data.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>SpaceJudge only reads the names and sizes of items in a folder you choose (such as Documents) to draw a space map. It does not read document contents, never changes or deletes files, and does not upload data.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>SpaceJudge only reads the names and sizes of items in a folder you choose (such as Downloads) to draw a space map. It does not read regular file contents, never changes or deletes files, and does not upload data.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>SpaceJudge</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>SpaceJudge only reads the names and sizes of items on a network volume you choose to draw a space map. It does not read regular file contents, never changes or deletes files, and does not upload data.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>SpaceJudge only reads the names and sizes of items on a removable volume you choose to draw a space map. It does not read regular file contents, never changes or deletes files, and does not upload data.</string>
+</dict>
+</plist>

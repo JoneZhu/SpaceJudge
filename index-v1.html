@@ -1,0 +1,2039 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>SpaceJudge · 第一版</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe id="codex-visualization" sandbox="allow-scripts" referrerpolicy="no-referrer" title="SpaceJudge · 第一版" data-srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot; data-visualize-standalone&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;SpaceJudge · 第一版&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 10px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+.cursor-interaction {
+  cursor: var(--cursor-interaction, pointer);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: var(--cursor-interaction, pointer);
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn,
+.nav-link {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: var(--cursor-interaction, pointer);
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover,
+.nav-link:not(:disabled):not([aria-disabled=&quot;true&quot;]):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled=&quot;true&quot;] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed=&quot;true&quot;],
+  [aria-selected=&quot;true&quot;],
+  .is-selected
+) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, var(--font-size-normal));
+  }
+
+  .form-control[type=&quot;file&quot;]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type=&quot;color&quot;] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;week&quot;]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: &quot;&quot;;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+
+  .form-range::-webkit-slider-runnable-track {
+    height: 44px;
+  }
+
+  .form-range::-moz-range-track {
+    height: 44px;
+  }
+
+  .form-range::-webkit-slider-thumb {
+    margin-top: 12px;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;script type=&quot;application/json&quot; id=&quot;codex-visualization-widget-state&quot;&gt;__CODEX_VISUALIZATION_WIDGET_STATE__&lt;/script&gt;
+&lt;script&gt;(() =&gt; {
+  const root = document.documentElement;
+  const mediaQuery = globalThis.matchMedia(&quot;(prefers-color-scheme: dark)&quot;);
+  const apply = Reflect.apply;
+  const isArray = Array.isArray;
+  const hasOwn = Object.hasOwn;
+  const parentWindow = globalThis.parent;
+  const stringify = JSON.stringify;
+  const parse = JSON.parse;
+  const encode = TextEncoder.prototype.encode.bind(new TextEncoder());
+  const initialStateElement = document.getElementById(
+    &quot;codex-visualization-widget-state&quot;,
+  );
+  const initialGlobals = parse(initialStateElement?.textContent ?? &quot;{}&quot;);
+  initialStateElement?.remove();
+  /** @type {Record&lt;string, unknown&gt; | null} */
+  let state = initialGlobals.widgetState ?? null;
+  const statePersistence = initialGlobals.statePersistence ?? &quot;none&quot;;
+  let nextStateRequestId = 0;
+  /** @type {Map&lt;number, { resolve: () =&gt; void; reject: (error: Error) =&gt; void; timeout: ReturnType&lt;typeof globalThis.setTimeout&gt;; serializedState: string }&gt;} */
+  const pendingStateWrites = new Map();
+  const persistenceError = () =&gt;
+    Object.assign(
+      new Error(&quot;The host could not persist the widget state update&quot;),
+      {
+        code: -32000,
+        data: { code: &quot;widget_state_persistence_failed&quot;, retryable: false },
+      },
+    );
+  /**
+   * @param {object} prototype
+   * @param {string} property
+   */
+  const getPrototypeGetter = (prototype, property) =&gt; {
+    // oxlint-disable-next-line typescript/unbound-method -- invoked through captured Reflect.apply
+    const getter = Object.getOwnPropertyDescriptor(prototype, property)?.get;
+    if (getter == null) {
+      throw new Error(`Missing ${property} getter`);
+    }
+    return getter;
+  };
+  const getMessageData = getPrototypeGetter(MessageEvent.prototype, &quot;data&quot;);
+  const getMessagePorts = getPrototypeGetter(MessageEvent.prototype, &quot;ports&quot;);
+  const getMessageSource = getPrototypeGetter(MessageEvent.prototype, &quot;source&quot;);
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const addHostMessageListener = MessagePort.prototype.addEventListener;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const postHostMessage = MessagePort.prototype.postMessage;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const startHostPort = MessagePort.prototype.start;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const stopMessagePropagation = Event.prototype.stopImmediatePropagation;
+  /** @type {MessagePort | null} */
+  let hostPort = null;
+  const postToHost = (type, payload) =&gt; {
+    if (hostPort != null) {
+      apply(postHostMessage, hostPort, [{ type, ...payload }]);
+    }
+  };
+  const openExternal = ({ href }) =&gt; {
+    if (globalThis.navigator.userActivation?.isActive === true) {
+      postToHost(&quot;open-external&quot;, { href });
+    }
+  };
+  const sendFollowUpMessage = ({ context, prompt, title }) =&gt; {
+    if (globalThis.navigator.userActivation?.isActive === true) {
+      postToHost(&quot;follow-up&quot;, { context, prompt, title });
+    }
+    return Promise.resolve();
+  };
+  /**
+   * @param {Record&lt;string, unknown&gt; | ((previous: Record&lt;string, unknown&gt; | null) =&gt; Record&lt;string, unknown&gt;)} next
+   * @returns {Promise&lt;void&gt;}
+   */
+  const setWidgetState = async (next) =&gt; {
+    const nextState = typeof next === &quot;function&quot; ? next(state) : next;
+    if (
+      nextState == null ||
+      typeof nextState !== &quot;object&quot; ||
+      isArray(nextState)
+    ) {
+      throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+    }
+    const inputState = stringify(
+      nextState,
+      (_key, /** @type {unknown} */ value) =&gt; {
+        if (
+          typeof value === &quot;undefined&quot; ||
+          typeof value === &quot;function&quot; ||
+          typeof value === &quot;symbol&quot; ||
+          (typeof value === &quot;number&quot; &amp;&amp; !Number.isFinite(value))
+        ) {
+          throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+        }
+        return value;
+      },
+    );
+    const parsedState = parse(inputState);
+    if (
+      parsedState == null ||
+      typeof parsedState !== &quot;object&quot; ||
+      isArray(parsedState)
+    ) {
+      throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+    }
+    const storedState = {
+      modelContent: null,
+      privateContent: null,
+      ...parsedState,
+    };
+    const serializedState = stringify(storedState);
+    if (encode(serializedState).length &gt; 16 * 1024) {
+      throw new TypeError(
+        &quot;Widget state must be a JSON object of at most 16 KiB&quot;,
+      );
+    }
+    if (
+      hasOwn(storedState, &quot;imageIds&quot;) &amp;&amp;
+      (!isArray(storedState.imageIds) ||
+        storedState.imageIds.some(
+          (/** @type {unknown} */ id) =&gt; typeof id !== &quot;string&quot;,
+        ))
+    ) {
+      throw new TypeError(&quot;Widget state imageIds must be an array of strings&quot;);
+    }
+    if (storedState.imageIds?.length &gt; 0) {
+      throw Object.assign(
+        new TypeError(&quot;Visualization state does not support image attachments&quot;),
+        { code: -32602, data: { code: &quot;images_unsupported&quot; } },
+      );
+    }
+    state = storedState;
+    globalThis.openai.widgetState = state;
+    globalThis.dispatchEvent(
+      new CustomEvent(&quot;openai:set_globals&quot;, {
+        detail: { globals: { widgetState: state } },
+      }),
+    );
+    if (statePersistence === &quot;none&quot;) {
+      throw persistenceError();
+    }
+    const id = ++nextStateRequestId;
+    return new Promise((resolve, reject) =&gt; {
+      const timeout = globalThis.setTimeout(() =&gt; {
+        pendingStateWrites.delete(id);
+        reject(persistenceError());
+      }, 30_000);
+      pendingStateWrites.set(id, { resolve, reject, timeout, serializedState });
+      postToHost(&quot;widget-state-write&quot;, { id, state: serializedState });
+    });
+  };
+  const syncTheme = () =&gt; {
+    const theme = mediaQuery.matches ? &quot;dark&quot; : &quot;light&quot;;
+    root.dataset.theme = theme;
+    globalThis.openai = {
+      ...globalThis.openai,
+      openExternal,
+      sendFollowUpMessage,
+      setWidgetState,
+      theme,
+      visualizationStyleVariables: {},
+      visualizationTheme: theme,
+      widgetState: state,
+      statePersistence,
+      stateModelContext: &quot;none&quot;,
+    };
+    globalThis.dispatchEvent(
+      new CustomEvent(&quot;openai:set_globals&quot;, {
+        detail: { globals: globalThis.openai },
+      }),
+    );
+  };
+  const sendHeight = () =&gt; {
+    postToHost(&quot;height&quot;, {
+      height: Math.ceil(
+        Math.max(
+          document.body.scrollHeight,
+          document.body.getBoundingClientRect().height,
+        ),
+      ),
+    });
+  };
+
+  globalThis.addEventListener(
+    &quot;message&quot;,
+    (event) =&gt; {
+      const data = apply(getMessageData, event, []);
+      const ports = apply(getMessagePorts, event, []);
+      const source = apply(getMessageSource, event, []);
+      if (
+        hostPort != null ||
+        source !== parentWindow ||
+        typeof data !== &quot;object&quot; ||
+        data?.type !== &quot;codex-visualization-initialize&quot; ||
+        !isArray(ports) ||
+        ports.length !== 1
+      ) {
+        return;
+      }
+      apply(stopMessagePropagation, event, []);
+      const nextHostPort = ports[0];
+      try {
+        apply(addHostMessageListener, nextHostPort, [
+          &quot;message&quot;,
+          (event) =&gt; {
+            const data = apply(getMessageData, event, []);
+            if (typeof data === &quot;object&quot; &amp;&amp; data?.type === &quot;measure&quot;) {
+              sendHeight();
+            } else if (
+              typeof data === &quot;object&quot; &amp;&amp;
+              data?.type === &quot;widget-state-result&quot;
+            ) {
+              /** @type {unknown} */
+              const id = data.id;
+              if (typeof id !== &quot;number&quot;) {
+                return;
+              }
+              const pending = pendingStateWrites.get(id);
+              if (pending != null) {
+                pendingStateWrites.delete(id);
+                globalThis.clearTimeout(pending.timeout);
+                if (data.ok === true) {
+                  pending.resolve();
+                } else {
+                  pending.reject(persistenceError());
+                }
+              }
+            }
+          },
+        ]);
+        apply(startHostPort, nextHostPort, []);
+      } catch {
+        return;
+      }
+      hostPort = nextHostPort;
+      for (const [id, { serializedState }] of pendingStateWrites) {
+        postToHost(&quot;widget-state-write&quot;, { id, state: serializedState });
+      }
+      sendHeight();
+    },
+    { capture: true },
+  );
+  document.currentScript?.remove();
+  mediaQuery.addEventListener(&quot;change&quot;, syncTheme);
+  globalThis.addEventListener(&quot;click&quot;, (event) =&gt; {
+    if (event.defaultPrevented) {
+      return;
+    }
+    let element = null;
+    if (event.target instanceof globalThis.Element) {
+      element = event.target;
+    } else if (event.target instanceof globalThis.Node) {
+      element = event.target.parentElement;
+    }
+    const link = element?.closest(&quot;a[href]&quot;);
+    const href = link?.getAttribute(&quot;href&quot;);
+    if (href == null) {
+      return;
+    }
+    if (href.startsWith(&quot;#&quot;)) {
+      let id;
+      try {
+        id = decodeURIComponent(href.slice(1));
+      } catch {
+        return;
+      }
+      const target = id.length === 0 ? root : document.getElementById(id);
+      if (
+        target == null ||
+        globalThis.navigator.userActivation?.isActive !== true
+      ) {
+        return;
+      }
+      event.preventDefault();
+      postToHost(&quot;scroll-to&quot;, {
+        top: target.getBoundingClientRect().top + globalThis.scrollY,
+      });
+      return;
+    }
+    event.preventDefault();
+    openExternal({ href });
+  });
+  new ResizeObserver(sendHeight).observe(document.body);
+  syncTheme();
+})();
+&lt;/script&gt;
+&lt;div id=&quot;spacejudge-prototype&quot; aria-label=&quot;SpaceJudge macOS 交互原型&quot;&gt;
+  &lt;style&gt;
+    #spacejudge-prototype{--sj-bg:#fff;--sj-canvas:#fafbfa;--sj-panel:#f5f6f5;--sj-line:#e6e9e7;--sj-text:#26312d;--sj-muted:#78827c;--sj-green:#07a95b;--sj-soft:#e6f5ec;--sj-radius:7px;color-scheme:light;font:14px/1.5 -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,&quot;PingFang SC&quot;,sans-serif;color:var(--sj-text);width:100%;max-width:1600px;margin:0 auto;position:relative;background:transparent}
+    #spacejudge-prototype *{box-sizing:border-box}#spacejudge-prototype button,#spacejudge-prototype input,#spacejudge-prototype select{font:inherit;color:inherit}#spacejudge-prototype button{cursor:pointer}#spacejudge-prototype button:disabled{cursor:default;opacity:.36}#spacejudge-prototype button:focus-visible,#spacejudge-prototype input:focus-visible{outline:2px solid var(--sj-green);outline-offset:3px}#spacejudge-prototype button{border:0;background:none}#spacejudge-prototype [hidden]{display:none!important}#spacejudge-prototype svg{flex-shrink:0;width:18px;height:18px}#spacejudge-prototype p,#spacejudge-prototype h1,#spacejudge-prototype h2,#spacejudge-prototype h3{margin:0}#spacejudge-prototype h1{font-size:23px;font-weight:600;letter-spacing:-.7px}#spacejudge-prototype h2{font-size:20px;font-weight:600}#spacejudge-prototype h3{font-size:14px;font-weight:600}#spacejudge-prototype a{color:#138050;text-underline-offset:3px}#spacejudge-prototype .sj-muted{color:var(--sj-muted)}#spacejudge-prototype .sj-small{font-size:12px}#spacejudge-prototype .sj-flex{display:flex;align-items:center;gap:9px}#spacejudge-prototype .sj-between{justify-content:space-between}#spacejudge-prototype .sj-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--sj-line);border-radius:6px;padding:7px 11px;background:var(--sj-bg);white-space:nowrap;font-size:12px;min-height:33px}#spacejudge-prototype .sj-button:hover{background:#f1f4f2}#spacejudge-prototype .sj-primary{background:var(--sj-green);border-color:var(--sj-green);color:#fff}#spacejudge-prototype .sj-primary:hover{background:#079c54}#spacejudge-prototype .sj-quiet{border-color:transparent;background:transparent;color:#657069}#spacejudge-prototype .sj-icon-button{width:31px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:5px;padding:0}#spacejudge-prototype .sj-icon-button:hover{background:#e9eeeb}#spacejudge-prototype .sj-pagebar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 2px 20px}#spacejudge-prototype .sj-brand{font-size:17px;font-weight:650;letter-spacing:-.5px}#spacejudge-prototype .sj-page-label{font-size:11px;color:#85918a;letter-spacing:1.6px;margin-left:15px}#spacejudge-prototype .sj-pagebar .sj-button{background:transparent}#spacejudge-prototype .sj-window{background:var(--sj-bg);border:1px solid #dfe4e0;border-radius:13px;overflow:hidden;box-shadow:0 12px 40px #23392b0b,0 2px 5px #253c2a05}#spacejudge-prototype .sj-titlebar{height:46px;background:#f7f8f7;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--sj-line);padding:0 17px;position:relative}#spacejudge-prototype .sj-lights{display:flex;gap:8px}#spacejudge-prototype .sj-lights span{width:11px;height:11px;border-radius:50%;background:#ff6058}#spacejudge-prototype .sj-lights span:nth-child(2){background:#febc2e}#spacejudge-prototype .sj-lights span:nth-child(3){background:#28c840}#spacejudge-prototype .sj-title{position:absolute;left:50%;transform:translateX(-50%);font-size:12px;font-weight:500;color:#68716b}#spacejudge-prototype .sj-demo{font-size:11px;color:#6d7a71;display:flex;align-items:center;gap:6px}#spacejudge-prototype .sj-demo:before{content:&quot;&quot;;width:6px;height:6px;background:var(--sj-green);border-radius:50%}#spacejudge-prototype .sj-body{display:grid;grid-template-columns:58px 173px minmax(0,1fr) 280px;min-height:688px}#spacejudge-prototype .sj-rail{background:#edf0ed;display:flex;flex-direction:column;align-items:center;gap:15px;padding:21px 5px 15px;border-right:1px solid #e5e9e6}#spacejudge-prototype .sj-appmark{width:31px;height:31px;background:var(--sj-green);border-radius:9px;display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:7px;margin-bottom:13px;transform:rotate(-3deg)}#spacejudge-prototype .sj-appmark span{background:#fff;border-radius:2px}#spacejudge-prototype .sj-appmark span:first-child{grid-row:span 2;opacity:.95}#spacejudge-prototype .sj-appmark span:last-child{opacity:.55}#spacejudge-prototype .sj-rail button{position:relative;width:43px;min-height:46px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;color:#7b867f;border-radius:7px;font-size:11px}#spacejudge-prototype .sj-rail button svg{width:21px;height:21px}#spacejudge-prototype .sj-rail button:hover{background:#e1e8e2}#spacejudge-prototype .sj-rail button.active{color:var(--sj-green);background:#deeee3}#spacejudge-prototype .sj-rail .sj-help{margin-top:auto}#spacejudge-prototype .sj-count{position:absolute;top:1px;right:1px;background:var(--sj-green);color:white;border-radius:10px;min-width:16px;padding:0 4px;font-size:11px}#spacejudge-prototype .sj-sidebar{background:#f7f8f7;border-right:1px solid var(--sj-line);padding:25px 12px 18px;display:flex;flex-direction:column;gap:24px}#spacejudge-prototype .sj-section-label{font-size:11px;color:#939b96;padding:0 10px;margin-bottom:9px;letter-spacing:.6px}#spacejudge-prototype .sj-location{display:flex;width:100%;align-items:center;gap:9px;padding:10px;border-radius:6px;font-size:12px;text-align:left;margin:2px 0}#spacejudge-prototype .sj-location svg{width:16px;height:16px;color:#8a968e}#spacejudge-prototype .sj-location:hover{background:#ecf0ed}#spacejudge-prototype .sj-location.active{background:#e4eee6;color:#247247;font-weight:500}#spacejudge-prototype .sj-location.active svg{color:#39875b}#spacejudge-prototype .sj-disk{margin-top:auto;border-top:1px solid var(--sj-line);padding:16px 8px 0;font-size:11px;color:#758178}#spacejudge-prototype .sj-disk b{font-weight:500;color:#414d45}#spacejudge-prototype .sj-capacity{height:5px;background:#e4e8e4;border-radius:4px;overflow:hidden;margin:12px 0 7px}#spacejudge-prototype .sj-capacity span{display:block;width:80.59%;height:100%;background:#94b19e}#spacejudge-prototype .sj-center{min-width:0;display:flex;flex-direction:column;background:var(--sj-bg)}#spacejudge-prototype .sj-heading{padding:25px 25px 18px;display:flex;justify-content:space-between;gap:12px;align-items:center}#spacejudge-prototype .sj-heading .sj-muted{font-size:11px;margin-top:4px}#spacejudge-prototype .sj-total{text-align:right;font-variant-numeric:tabular-nums}#spacejudge-prototype .sj-total strong{font-size:25px;letter-spacing:-1px;font-weight:550}#spacejudge-prototype .sj-total span{font-size:12px;color:#738177;margin-left:4px}#spacejudge-prototype .sj-tools{padding:0 25px 16px}#spacejudge-prototype .sj-search{display:flex;align-items:center;gap:8px;background:#f3f5f3;border:1px solid transparent;border-radius:6px;padding:8px 11px}#spacejudge-prototype .sj-search:focus-within{border-color:#8dc9a3;background:#fff}#spacejudge-prototype .sj-search svg{width:15px;height:15px;color:#8b978e}#spacejudge-prototype .sj-search input{background:transparent;outline:none;border:0;min-width:0;width:100%;font-size:12px}#spacejudge-prototype .sj-search input::placeholder{color:#99a29c}#spacejudge-prototype .sj-key{font-size:11px;color:#9ba39e;border:1px solid #dde3de;border-radius:3px;padding:0 4px;white-space:nowrap}#spacejudge-prototype .sj-filterline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap}#spacejudge-prototype .sj-chips{display:flex;gap:5px;flex-wrap:wrap}#spacejudge-prototype .sj-chip{border-radius:4px;padding:4px 8px;background:#f3f5f3;color:#7a857d;font-size:11px}#spacejudge-prototype .sj-chip.active{background:var(--sj-soft);color:#16884a}#spacejudge-prototype .sj-details{display:flex;align-items:center;gap:4px;font-size:11px;color:#8c968e}#spacejudge-prototype .sj-details button{font-size:14px;width:23px;height:23px;border:1px solid var(--sj-line);border-radius:4px;line-height:1}#spacejudge-prototype .sj-details output{min-width:17px;text-align:center;color:#54665a}#spacejudge-prototype .sj-navline{display:flex;align-items:center;gap:4px;padding:9px 18px;border-top:1px solid var(--sj-line);border-bottom:1px solid var(--sj-line);background:#fcfdfc;min-height:46px}#spacejudge-prototype .sj-crumbs{display:flex;align-items:center;gap:2px;min-width:0;flex-wrap:wrap;font-size:11px;margin-left:6px}#spacejudge-prototype .sj-crumbs button{padding:3px 4px;color:#78847b;border-radius:3px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#spacejudge-prototype .sj-crumbs button:last-child{color:#344b3d;font-weight:500}#spacejudge-prototype .sj-crumbs span{color:#bcc4be}#spacejudge-prototype .sj-map-shell{position:relative;padding:14px;background:var(--sj-canvas);flex:1;display:flex;flex-direction:column;gap:8px}#spacejudge-prototype .sj-map-caption{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#859188;padding:0 3px;flex-wrap:wrap}#spacejudge-prototype .sj-treemap{position:relative;min-height:390px;flex:1;border-radius:5px;isolation:isolate}#spacejudge-prototype .sj-tile{position:absolute;border-radius:var(--sj-radius);overflow:hidden;background:var(--tile-fill);border:1px solid #ffffffa8;transition:background .18s}#spacejudge-prototype .sj-tile-hit{position:absolute;inset:0;display:flex;align-items:flex-start;flex-direction:column;text-align:left;padding:10px 11px;overflow:hidden;color:#3c5346}#spacejudge-prototype .sj-tile-hit:hover{background:#ffffff25}#spacejudge-prototype .sj-tile-hit.selected{box-shadow:inset 0 0 0 2px #079d57;border-radius:inherit;background:#ffffff16}#spacejudge-prototype .sj-tile-name{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:550;line-height:1.4}#spacejudge-prototype .sj-tile-name .sj-dir-glyph{font-size:12px;opacity:.55;margin-right:5px}#spacejudge-prototype .sj-tile-size{font-size:11px;opacity:.72;margin-top:3px;font-variant-numeric:tabular-nums}#spacejudge-prototype .sj-tile.has-children&gt;.sj-tile-hit{flex-direction:row;gap:8px;align-items:flex-start;padding:7px 9px}#spacejudge-prototype .sj-tile.has-children&gt;.sj-tile-hit .sj-tile-size{margin:0;white-space:nowrap;font-size:11px;line-height:1.7}#spacejudge-prototype .sj-tile.has-children&gt;.sj-tile-hit .sj-tile-name{font-size:11px}#spacejudge-prototype .sj-tagdot{position:absolute;right:7px;bottom:7px;width:7px;height:7px;border-radius:50%;box-shadow:0 0 0 2px #ffffffaa}#spacejudge-prototype .sj-legend{display:flex;align-items:center;gap:13px;font-size:11px;color:#7b8880;padding:5px 4px 0;flex-wrap:wrap}#spacejudge-prototype .sj-legend span{display:flex;align-items:center;gap:5px}#spacejudge-prototype .sj-legend i{width:7px;height:7px;border-radius:2px;background:var(--dot)}#spacejudge-prototype .sj-scanline{display:flex;align-items:center;gap:7px;font-size:11px;padding:11px 21px;border-top:1px solid var(--sj-line);min-height:41px;color:#7e8982;flex-wrap:wrap}#spacejudge-prototype .sj-statusdot{width:5px;height:5px;background:var(--sj-green);border-radius:50%}#spacejudge-prototype .sj-scan-actions{margin-left:auto;display:flex;align-items:center;gap:8px}#spacejudge-prototype .sj-textbutton{font-size:11px;color:#19834c;padding:2px 0}#spacejudge-prototype .sj-scanbar{height:2px;background:#e9efea;position:relative}#spacejudge-prototype .sj-scanbar span{display:block;height:2px;background:var(--sj-green);transition:width .3s}#spacejudge-prototype .sj-inspector{border-left:1px solid var(--sj-line);background:#fdfefd;display:flex;flex-direction:column;min-width:0;padding:0 19px 19px}#spacejudge-prototype .sj-inspect-tabs{display:flex;gap:20px;align-items:center;border-bottom:1px solid var(--sj-line);height:51px;font-size:12px;margin:0 -19px 19px;padding:0 19px}#spacejudge-prototype .sj-inspect-tabs span:first-child{height:51px;display:flex;align-items:center;border-bottom:2px solid var(--sj-green);color:#268251;font-weight:500}#spacejudge-prototype .sj-inspect-tabs span:last-child{margin-left:auto;font-size:11px;color:#99a59c}#spacejudge-prototype .sj-objecticon{width:42px;height:42px;background:#ebf2ed;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#6c9b7b;margin-bottom:12px}#spacejudge-prototype .sj-objecticon svg{width:23px;height:23px}#spacejudge-prototype .sj-object-name{font-size:17px;font-weight:550;overflow-wrap:anywhere}#spacejudge-prototype .sj-object-path{font-size:11px;line-height:1.7;color:#8e9991;margin-top:5px;overflow-wrap:anywhere}#spacejudge-prototype .sj-meta{display:grid;grid-template-columns:1fr 1fr;gap:15px 10px;margin-top:18px;padding-bottom:18px;border-bottom:1px solid var(--sj-line)}#spacejudge-prototype .sj-meta dt{font-size:11px;color:#8b968e;margin-bottom:3px}#spacejudge-prototype .sj-meta dd{font-size:12px;color:#425248;margin:0;font-variant-numeric:tabular-nums}#spacejudge-prototype .sj-ai{margin-top:18px}#spacejudge-prototype .sj-ai-heading{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:500;margin-bottom:11px}#spacejudge-prototype .sj-ai-heading svg{width:16px;height:16px;color:var(--sj-green)}#spacejudge-prototype .sj-ai-heading small{font-weight:400;font-size:11px;margin-left:auto;color:#9aa59d}#spacejudge-prototype .sj-answer{font-size:12px;line-height:1.85;background:#edf7f0;padding:13px;border-radius:0 9px 9px 9px;color:#43634e}#spacejudge-prototype .sj-answer p+p{margin-top:8px}#spacejudge-prototype .sj-answer strong{font-weight:550;color:#216239}#spacejudge-prototype .sj-evidence{margin-top:13px;font-size:11px;color:#7e8b81;line-height:1.8}#spacejudge-prototype .sj-evidence summary{cursor:pointer;color:#617c69;font-size:11px}#spacejudge-prototype .sj-evidence ul{padding-left:15px;margin:6px 0}#spacejudge-prototype .sj-question-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}#spacejudge-prototype .sj-question-row button{font-size:11px;padding:5px 7px;background:#f3f6f3;color:#6d8272;border-radius:4px}#spacejudge-prototype .sj-followup{margin-top:9px;border-left:2px solid #bad6c2;padding-left:10px;font-size:11px;line-height:1.8;color:#607b68}#spacejudge-prototype .sj-tags{display:flex;align-items:center;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--sj-line);font-size:11px;color:#8b968e}#spacejudge-prototype .sj-tag-button{height:17px;width:17px;border-radius:50%;background:var(--tag)!important;box-shadow:inset 0 0 0 4px #fff;border:1px solid #dfe5e0}#spacejudge-prototype .sj-tag-button.active{outline:2px solid var(--tag);outline-offset:1px}#spacejudge-prototype .sj-inspect-actions{margin-top:auto;padding-top:22px;display:flex;flex-direction:column;gap:8px}#spacejudge-prototype .sj-inspect-actions .sj-button{width:100%;min-height:35px}#spacejudge-prototype .sj-inspect-footnote{font-size:11px;text-align:center;color:#a1aaa4;line-height:1.6;margin-top:2px}#spacejudge-prototype .sj-bottom{padding:9px 17px;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#f6f8f6;border-top:1px solid var(--sj-line);font-size:11px;color:#8a968e}#spacejudge-prototype .sj-hoverpath{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}#spacejudge-prototype .sj-brief{display:flex;align-items:center;gap:14px;justify-content:space-between;padding:17px 3px 7px;color:#859087;font-size:11px}#spacejudge-prototype .sj-brief b{color:#54675a;font-weight:500}#spacejudge-prototype .sj-note-badge{font-size:11px;letter-spacing:1px;color:#87978c;white-space:nowrap}#spacejudge-prototype .sj-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center;padding:24px;color:#8c998f;background:#f4f7f4;border-radius:8px;font-size:12px}#spacejudge-prototype .sj-empty strong{font-size:15px;color:#597260;font-weight:500}#spacejudge-prototype .sj-error{font-size:11px;color:#a2513e;margin-top:7px}#spacejudge-prototype .sj-tour{background:#edf7ef;border-bottom:1px solid #dbeade;padding:12px 22px;display:flex;gap:12px;align-items:center;font-size:12px;color:#4c7057;flex-wrap:wrap}#spacejudge-prototype .sj-tour p{flex:1;min-width:160px}#spacejudge-prototype .sj-tour b{font-weight:550}#spacejudge-prototype .sj-toast{position:absolute;left:50%;bottom:65px;transform:translateX(-50%);max-width:calc(100% - 40px);background:#2b4336;color:#fff;padding:11px 18px;border-radius:8px;font-size:12px;box-shadow:0 7px 22px #243b2822;z-index:20;display:flex;gap:15px;align-items:center}#spacejudge-prototype .sj-toast button{color:#a6f0c0;text-decoration:underline;white-space:nowrap}#spacejudge-prototype dialog{border:1px solid #e2e9e3;border-radius:15px;padding:0;background:#fff;color:var(--sj-text);width:min(720px,calc(100% - 28px));max-height:85vh;box-shadow:0 22px 85px #14261d33}#spacejudge-prototype dialog::backdrop{background:#17332440;backdrop-filter:blur(3px)}#spacejudge-prototype .sj-modal-head{display:flex;align-items:center;justify-content:space-between;padding:22px 25px;border-bottom:1px solid var(--sj-line)}#spacejudge-prototype .sj-modal-head h2{font-size:18px}#spacejudge-prototype .sj-modal-body{padding:22px 25px;max-height:63vh;overflow:auto}#spacejudge-prototype .sj-modal-body p{font-size:13px;color:#758178;line-height:1.85}#spacejudge-prototype .sj-modal-body h3{margin:22px 0 8px}#spacejudge-prototype .sj-modal-body h3:first-child{margin-top:0}#spacejudge-prototype .sj-modal-body ul{font-size:12px;line-height:1.95;color:#6b7a6f;padding-left:18px;margin:8px 0}#spacejudge-prototype .sj-modal-body table{border-collapse:collapse;width:100%;font-size:12px;margin:13px 0}#spacejudge-prototype .sj-modal-body th,#spacejudge-prototype .sj-modal-body td{text-align:left;padding:11px 9px;border-bottom:1px solid var(--sj-line);vertical-align:top}#spacejudge-prototype .sj-modal-body th{color:#829087;font-weight:500;background:#f5f8f5}#spacejudge-prototype .sj-modal-body td{color:#5e7265}#spacejudge-prototype .sj-modal-body code{font-size:11px;background:#f1f5f1;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}#spacejudge-prototype .sj-modal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 25px;background:#f7f9f7;border-top:1px solid var(--sj-line);font-size:11px;color:#849187;flex-wrap:wrap}#spacejudge-prototype .sj-intro-box{background:#f0f8f2;border-radius:8px;padding:14px 16px;margin-bottom:18px;font-size:12px;line-height:1.8;color:#52715b}#spacejudge-prototype .sj-suggestion{display:flex;gap:13px;align-items:center;padding:15px 0;border-bottom:1px solid var(--sj-line)}#spacejudge-prototype .sj-suggestion-main{flex:1;min-width:0}#spacejudge-prototype .sj-suggestion-main strong{font-size:13px;font-weight:500}#spacejudge-prototype .sj-suggestion-main p{font-size:11px;margin-top:3px}#spacejudge-prototype .sj-suggestion-size{font-size:14px;font-variant-numeric:tabular-nums;color:#4e6b57;white-space:nowrap}#spacejudge-prototype .sj-queue-empty{text-align:center;padding:35px 10px;color:#85978a}#spacejudge-prototype .sj-shortcut{display:inline-flex;border:1px solid #dce4dd;padding:0 5px;border-radius:4px;background:#f4f7f4;font-size:11px;color:#617568}#spacejudge-prototype .sj-tag-legend{display:flex;gap:13px;flex-wrap:wrap;padding-top:8px;font-size:11px;color:#839188}#spacejudge-prototype .sj-tag-legend span{display:flex;gap:5px;align-items:center}#spacejudge-prototype .sj-tag-legend i{width:7px;height:7px;border-radius:50%;background:var(--tag)}#spacejudge-prototype .sj-context{position:absolute;z-index:25;width:190px;background:#fff;border:1px solid #e0e8e2;box-shadow:0 8px 30px #243c2c20;padding:5px;border-radius:8px}#spacejudge-prototype .sj-context button{display:block;width:100%;text-align:left;font-size:12px;padding:8px 10px;border-radius:5px}#spacejudge-prototype .sj-context button:hover{background:#edf5ee}#spacejudge-prototype .sj-tour-focus{box-shadow:inset 0 0 0 2px #07a95b!important}#spacejudge-prototype .sj-neutral .sj-tile{background:#e8eee9!important}
+    @media(min-width:1400px){#spacejudge-prototype .sj-body{min-height:745px}#spacejudge-prototype .sj-treemap{min-height:446px}}
+    @media(max-width:1150px){#spacejudge-prototype .sj-body{grid-template-columns:54px 144px minmax(0,1fr) 245px}#spacejudge-prototype .sj-heading{padding:22px 18px 15px}#spacejudge-prototype .sj-tools{padding:0 18px 15px}#spacejudge-prototype .sj-inspector{padding-left:16px;padding-right:16px}#spacejudge-prototype .sj-inspect-tabs{margin-left:-16px;margin-right:-16px;padding:0 16px}#spacejudge-prototype .sj-sidebar{padding-left:7px;padding-right:7px}#spacejudge-prototype .sj-page-label{letter-spacing:.8px}#spacejudge-prototype .sj-map-shell{padding:10px}}
+    @media(max-width:950px){#spacejudge-prototype .sj-sidebar{display:none}#spacejudge-prototype .sj-body{grid-template-columns:54px minmax(0,1fr) 245px}#spacejudge-prototype .sj-page-label{display:none}}
+    @media(max-width:680px){#spacejudge-prototype .sj-body{grid-template-columns:48px minmax(0,1fr)}#spacejudge-prototype .sj-inspector{grid-column:2;border-left:0;border-top:1px solid var(--sj-line);padding-bottom:20px}#spacejudge-prototype .sj-rail{grid-row:span 2;gap:10px;padding-left:2px;padding-right:2px}#spacejudge-prototype .sj-rail .sj-help{margin-top:20px}#spacejudge-prototype .sj-inspect-actions{margin-top:0}#spacejudge-prototype .sj-treemap{min-height:365px}#spacejudge-prototype .sj-pagebar{padding:8px 0 13px;gap:5px;flex-wrap:wrap}#spacejudge-prototype .sj-pagebar .sj-button{font-size:11px;padding:5px 7px}#spacejudge-prototype .sj-titlebar{padding:0 12px}#spacejudge-prototype .sj-title{display:none}#spacejudge-prototype .sj-heading{padding:18px 12px 14px}#spacejudge-prototype .sj-heading h1{font-size:20px}#spacejudge-prototype .sj-total strong{font-size:21px}#spacejudge-prototype .sj-tools{padding:0 12px 12px}#spacejudge-prototype .sj-navline{padding:7px 8px}#spacejudge-prototype .sj-map-caption span:last-child{display:none}#spacejudge-prototype .sj-scanline{padding:10px 12px}#spacejudge-prototype .sj-brief{align-items:flex-start;gap:8px;flex-direction:column}#spacejudge-prototype .sj-bottom&gt;span:last-child{display:none}#spacejudge-prototype .sj-legend{gap:9px}#spacejudge-prototype .sj-search input{font-size:16px}#spacejudge-prototype .sj-key{display:none}#spacejudge-prototype .sj-modal-body{padding:18px}#spacejudge-prototype .sj-modal-head{padding:17px 18px}#spacejudge-prototype .sj-suggestion{flex-wrap:wrap}#spacejudge-prototype .sj-modal-body td,#spacejudge-prototype .sj-modal-body th{padding:8px 4px}#spacejudge-prototype .sj-details{margin-left:auto}}
+    @media(prefers-reduced-motion:reduce){#spacejudge-prototype *{transition:none!important;animation:none!important}}
+  &lt;/style&gt;
+  &lt;header class=&quot;sj-pagebar&quot;&gt;&lt;div class=&quot;sj-flex&quot;&gt;&lt;span class=&quot;sj-brand&quot;&gt;SpaceJudge&lt;span style=&quot;color:var(--sj-green)&quot;&gt;.&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;sj-page-label&quot;&gt;macOS · INTERACTIVE CONCEPT 01&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;sj-flex&quot;&gt;&lt;button class=&quot;sj-button sj-quiet&quot; data-action=&quot;guide&quot;&gt;&lt;i data-lucide=&quot;circle-help&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt; 原型说明&lt;/button&gt;&lt;button class=&quot;sj-button&quot; data-action=&quot;tour&quot;&gt;&lt;i data-lucide=&quot;play&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt; 跟着体验&lt;/button&gt;&lt;/div&gt;&lt;/header&gt;
+  &lt;section class=&quot;sj-window&quot; aria-label=&quot;SpaceJudge 应用窗口&quot;&gt;
+    &lt;div class=&quot;sj-titlebar&quot;&gt;&lt;div class=&quot;sj-lights&quot; aria-hidden=&quot;true&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;span class=&quot;sj-title&quot;&gt;SpaceJudge — 看见空间，做出判断&lt;/span&gt;&lt;span class=&quot;sj-demo&quot;&gt;交互演示 · 模拟数据&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;sj-tour&quot; hidden id=&quot;sj-tour&quot;&gt;&lt;span class=&quot;sj-shortcut&quot; id=&quot;sj-tour-number&quot;&gt;1 / 4&lt;/span&gt;&lt;p id=&quot;sj-tour-text&quot;&gt;&lt;/p&gt;&lt;button class=&quot;sj-button&quot; data-action=&quot;tour-next&quot;&gt;下一步&lt;/button&gt;&lt;button class=&quot;sj-icon-button&quot; data-action=&quot;tour-close&quot; aria-label=&quot;关闭操作引导&quot;&gt;×&lt;/button&gt;&lt;/div&gt;
+    &lt;div class=&quot;sj-body&quot;&gt;
+      &lt;nav class=&quot;sj-rail&quot; aria-label=&quot;主导航&quot;&gt;&lt;div class=&quot;sj-appmark&quot; aria-hidden=&quot;true&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;button class=&quot;active&quot; data-action=&quot;map&quot; aria-label=&quot;空间地图&quot;&gt;&lt;i data-lucide=&quot;panels-top-left&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;空间&lt;/span&gt;&lt;/button&gt;&lt;button data-action=&quot;suggestions&quot; aria-label=&quot;AI 清理建议&quot;&gt;&lt;i data-lucide=&quot;sparkles&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;建议&lt;/span&gt;&lt;/button&gt;&lt;button data-action=&quot;queue&quot; aria-label=&quot;清理清单&quot;&gt;&lt;i data-lucide=&quot;list-checks&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;清单&lt;/span&gt;&lt;span class=&quot;sj-count&quot; id=&quot;sj-queue-count&quot; hidden&gt;0&lt;/span&gt;&lt;/button&gt;&lt;button class=&quot;sj-help&quot; data-action=&quot;guide&quot; aria-label=&quot;帮助与设计说明&quot;&gt;&lt;i data-lucide=&quot;book-open&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;说明&lt;/span&gt;&lt;/button&gt;&lt;/nav&gt;
+      &lt;aside class=&quot;sj-sidebar&quot; aria-label=&quot;扫描位置&quot;&gt;&lt;div&gt;&lt;div class=&quot;sj-section-label&quot;&gt;扫描位置&lt;/div&gt;&lt;button class=&quot;sj-location active&quot; data-location=&quot;home&quot;&gt;&lt;i data-lucide=&quot;house&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt; 我的文件&lt;/button&gt;&lt;button class=&quot;sj-location&quot; data-action=&quot;location&quot;&gt;&lt;i data-lucide=&quot;folder-plus&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt; 选择位置…&lt;/button&gt;&lt;/div&gt;&lt;div&gt;&lt;div class=&quot;sj-section-label&quot;&gt;常用目录&lt;/div&gt;&lt;button class=&quot;sj-location&quot; data-location=&quot;downloads&quot;&gt;&lt;i data-lucide=&quot;download&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt; 下载&lt;/button&gt;&lt;button class=&quot;sj-location&quot; data-location=&quot;movies&quot;&gt;&lt;i data-lucide=&quot;clapperboard&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt; 影片&lt;/button&gt;&lt;button class=&quot;sj-location&quot; data-location=&quot;projects&quot;&gt;&lt;i data-lucide=&quot;folder-code&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt; 项目&lt;/button&gt;&lt;button class=&quot;sj-location&quot; data-location=&quot;library&quot;&gt;&lt;i data-lucide=&quot;archive&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt; 资源库&lt;/button&gt;&lt;/div&gt;&lt;div&gt;&lt;div class=&quot;sj-section-label&quot;&gt;检查标记&lt;/div&gt;&lt;button class=&quot;sj-location&quot; data-filter=&quot;:green&quot;&gt;&lt;span style=&quot;color:#4da97a&quot;&gt;●&lt;/span&gt; 可以处理&lt;/button&gt;&lt;button class=&quot;sj-location&quot; data-filter=&quot;:yellow&quot;&gt;&lt;span style=&quot;color:#cea854&quot;&gt;●&lt;/span&gt; 稍后确认&lt;/button&gt;&lt;button class=&quot;sj-location&quot; data-filter=&quot;:red&quot;&gt;&lt;span style=&quot;color:#c8817c&quot;&gt;●&lt;/span&gt; 需要保留&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;sj-disk&quot;&gt;&lt;div class=&quot;sj-flex&quot;&gt;&lt;i data-lucide=&quot;hard-drive&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;b&gt;Macintosh HD&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;sj-capacity&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;412.6 GB / 512 GB&lt;/div&gt;&lt;div style=&quot;margin-top:5px&quot;&gt;可用 99.4 GB · 磁盘示例&lt;/div&gt;&lt;div style=&quot;margin-top:8px;font-size:11px;color:#9aa69e&quot;&gt;本次扫描：用户目录&lt;br&gt;另有 100 GB 不在此范围&lt;/div&gt;&lt;/div&gt;&lt;/aside&gt;
+      &lt;main class=&quot;sj-center&quot;&gt;&lt;div class=&quot;sj-heading&quot;&gt;&lt;div&gt;&lt;h1 id=&quot;sj-view-name&quot;&gt;我的文件&lt;/h1&gt;&lt;p class=&quot;sj-muted&quot; id=&quot;sj-view-subtitle&quot;&gt;/Users/lin&lt;/p&gt;&lt;/div&gt;&lt;div class=&quot;sj-total&quot;&gt;&lt;strong id=&quot;sj-view-size&quot;&gt;312.6&lt;/strong&gt;&lt;span&gt;GB&lt;/span&gt;&lt;p class=&quot;sj-muted&quot; id=&quot;sj-view-count&quot;&gt;目录内占用 · 示例&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;sj-tools&quot;&gt;&lt;div role=&quot;search&quot; class=&quot;sj-search&quot; id=&quot;sj-filter-form&quot;&gt;&lt;i data-lucide=&quot;search&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;input id=&quot;sj-filter&quot; aria-label=&quot;筛选文件&quot; placeholder=&quot;筛选文件，例如 *.dmg 或 &gt;10gb&quot; autocomplete=&quot;off&quot; spellcheck=&quot;false&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;sj-key&quot; data-action=&quot;apply-filter&quot;&gt;↵ 筛选&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;sj-icon-button&quot; data-action=&quot;clear-filter&quot; aria-label=&quot;清除筛选&quot; style=&quot;width:18px;height:18px&quot;&gt;×&lt;/button&gt;&lt;/div&gt;&lt;p id=&quot;sj-filter-error&quot; class=&quot;sj-error&quot; role=&quot;alert&quot; hidden&gt;&lt;/p&gt;&lt;div class=&quot;sj-filterline&quot;&gt;&lt;div class=&quot;sj-chips&quot;&gt;&lt;button class=&quot;sj-chip active&quot; data-filter=&quot;&quot;&gt;全部文件&lt;/button&gt;&lt;button class=&quot;sj-chip&quot; data-filter=&quot;&gt;10gb&quot;&gt;大于 10 GB&lt;/button&gt;&lt;button class=&quot;sj-chip&quot; data-filter=&quot;*.dmg&quot;&gt;安装包&lt;/button&gt;&lt;button class=&quot;sj-chip&quot; data-filter=&quot;&gt;6months&quot;&gt;半年未修改&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;sj-details&quot;&gt;&lt;span&gt;细节&lt;/span&gt;&lt;button data-action=&quot;less-detail&quot; aria-label=&quot;减少图中细节&quot;&gt;−&lt;/button&gt;&lt;output id=&quot;sj-detail-level&quot;&gt;2&lt;/output&gt;&lt;button data-action=&quot;more-detail&quot; aria-label=&quot;增加图中细节&quot;&gt;+&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;sj-navline&quot;&gt;&lt;button class=&quot;sj-icon-button&quot; data-action=&quot;back&quot; aria-label=&quot;后退&quot;&gt;&lt;i data-lucide=&quot;chevron-left&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/button&gt;&lt;button class=&quot;sj-icon-button&quot; data-action=&quot;forward&quot; aria-label=&quot;前进&quot;&gt;&lt;i data-lucide=&quot;chevron-right&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/button&gt;&lt;button class=&quot;sj-icon-button&quot; data-action=&quot;up&quot; aria-label=&quot;上一级目录&quot;&gt;&lt;i data-lucide=&quot;arrow-up&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/button&gt;&lt;div class=&quot;sj-crumbs&quot; id=&quot;sj-crumbs&quot; aria-label=&quot;目录路径&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;sj-map-shell&quot;&gt;&lt;div class=&quot;sj-map-caption&quot;&gt;&lt;span id=&quot;sj-map-caption&quot;&gt;面积代表占用大小 · 颜色区分目录&lt;/span&gt;&lt;span&gt;单击展开 · 双击进入 · 右键操作&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;sj-treemap&quot; id=&quot;sj-treemap&quot; aria-label=&quot;可交互的目录空间图&quot;&gt;&lt;/div&gt;&lt;div class=&quot;sj-legend&quot;&gt;&lt;span&gt;&lt;i style=&quot;--dot:#a8c7b4&quot;&gt;&lt;/i&gt;资源库&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;--dot:#b0c2cf&quot;&gt;&lt;/i&gt;影片&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;--dot:#cdbfaa&quot;&gt;&lt;/i&gt;下载&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;--dot:#b9b6d0&quot;&gt;&lt;/i&gt;项目&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;--dot:#c7baad&quot;&gt;&lt;/i&gt;照片&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;--dot:#bdc9b1&quot;&gt;&lt;/i&gt;文稿&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;sj-scanbar&quot; id=&quot;sj-scanbar&quot; hidden&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;sj-scanline&quot;&gt;&lt;span class=&quot;sj-statusdot&quot;&gt;&lt;/span&gt;&lt;span id=&quot;sj-scan-status&quot;&gt;示例扫描完成&lt;/span&gt;&lt;span id=&quot;sj-file-count&quot;&gt;&lt;/span&gt;&lt;div class=&quot;sj-scan-actions&quot;&gt;&lt;button class=&quot;sj-textbutton&quot; data-action=&quot;pause-scan&quot; hidden&gt;暂停&lt;/button&gt;&lt;button class=&quot;sj-textbutton&quot; data-action=&quot;stop-scan&quot; hidden&gt;停止&lt;/button&gt;&lt;button class=&quot;sj-textbutton&quot; data-action=&quot;rescan&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;↻&lt;/span&gt; 演示重新扫描&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/main&gt;
+      &lt;aside class=&quot;sj-inspector&quot; id=&quot;sj-inspector&quot; aria-label=&quot;选中项详情与 AI 判断&quot;&gt;&lt;div class=&quot;sj-inspect-tabs&quot;&gt;&lt;span&gt;文件洞察&lt;/span&gt;&lt;span&gt;AI · 示例判断&lt;/span&gt;&lt;/div&gt;&lt;div id=&quot;sj-inspector-content&quot;&gt;&lt;/div&gt;&lt;div class=&quot;sj-inspect-actions&quot; id=&quot;sj-inspect-actions&quot;&gt;&lt;/div&gt;&lt;/aside&gt;
+    &lt;/div&gt;&lt;footer class=&quot;sj-bottom&quot;&gt;&lt;span class=&quot;sj-hoverpath&quot; id=&quot;sj-hoverpath&quot;&gt;悬停查看完整路径，单击查看判断依据&lt;/span&gt;&lt;span id=&quot;sj-trash-status&quot;&gt;本地演示 · 未读取你的磁盘&lt;/span&gt;&lt;/footer&gt;
+  &lt;/section&gt;
+  &lt;div class=&quot;sj-brief&quot;&gt;&lt;span&gt;&lt;b&gt;试一试：&lt;/b&gt; 单击「资源库」原位展开，再双击「Developer」进入；右侧可查看处理建议。&lt;/span&gt;&lt;span class=&quot;sj-note-badge&quot;&gt;SPACE × CONTEXT × JUDGEMENT&lt;/span&gt;&lt;/div&gt;
+  &lt;div class=&quot;sj-context&quot; id=&quot;sj-context&quot; hidden&gt;&lt;/div&gt;&lt;div class=&quot;sj-toast&quot; id=&quot;sj-toast&quot; role=&quot;status&quot; hidden&gt;&lt;/div&gt;
+  &lt;dialog id=&quot;sj-dialog&quot; aria-labelledby=&quot;sj-dialog-title&quot;&gt;&lt;div class=&quot;sj-modal-head&quot;&gt;&lt;h2 id=&quot;sj-dialog-title&quot;&gt;&lt;/h2&gt;&lt;button class=&quot;sj-icon-button&quot; data-action=&quot;close-dialog&quot; aria-label=&quot;关闭弹窗&quot;&gt;×&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;sj-modal-body&quot; id=&quot;sj-dialog-body&quot;&gt;&lt;/div&gt;&lt;div class=&quot;sj-modal-foot&quot; id=&quot;sj-dialog-foot&quot;&gt;&lt;/div&gt;&lt;/dialog&gt;
+  &lt;script&gt;
+  (()=&gt;{
+    const root=document.getElementById(&#x27;spacejudge-prototype&#x27;);
+    const $=s=&gt;root.querySelector(s), $$=s=&gt;Array.from(root.querySelectorAll(s));
+    const esc=s=&gt;String(s).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g,c=&gt;({&#x27;&amp;&#x27;:&#x27;&amp;amp;&#x27;,&#x27;&lt;&#x27;:&#x27;&amp;lt;&#x27;,&#x27;&gt;&#x27;:&#x27;&amp;gt;&#x27;,&#x27;&quot;&#x27;:&#x27;&amp;quot;&#x27;,&quot;&#x27;&quot;:&#x27;&amp;#39;&#x27;}[c]));
+    const file=(id,name,size,months=2,extra={})=&gt;({id,name,size,months,...extra});
+    const dir=(id,name,children,extra={})=&gt;({id,name,children,...extra});
+    const data=dir(&#x27;home&#x27;,&#x27;我的文件&#x27;,[
+      dir(&#x27;library&#x27;,&#x27;资源库&#x27;,[
+        dir(&#x27;developer&#x27;,&#x27;Developer&#x27;,[dir(&#x27;derived&#x27;,&#x27;DerivedData&#x27;,[file(&#x27;dd1&#x27;,&#x27;LikeSports-fkh…&#x27;,13.6),file(&#x27;dd2&#x27;,&#x27;SpaceJudge-axq…&#x27;,8.8)],{rule:&#x27;derived&#x27;}),dir(&#x27;archives&#x27;,&#x27;Archives&#x27;,[file(&#x27;ar1&#x27;,&#x27;LikeSports 1.8.xcarchive&#x27;,6.4,3),file(&#x27;ar2&#x27;,&#x27;LikeSports 1.7.xcarchive&#x27;,3.8,9)],{rule:&#x27;archive&#x27;}),dir(&#x27;device&#x27;,&#x27;iOS DeviceSupport&#x27;,[file(&#x27;dv1&#x27;,&#x27;iOS 18.5&#x27;,4.2,4),file(&#x27;dv2&#x27;,&#x27;iOS 17.6&#x27;,1.8,14)])]),
+        dir(&#x27;containers&#x27;,&#x27;Containers&#x27;,[dir(&#x27;wechat&#x27;,&#x27;微信&#x27;,[file(&#x27;wc1&#x27;,&#x27;聊天附件&#x27;,12.2),file(&#x27;wc2&#x27;,&#x27;聊天数据库&#x27;,6.4)],{rule:&#x27;personal&#x27;}),dir(&#x27;adobe&#x27;,&#x27;Adobe&#x27;,[file(&#x27;ad1&#x27;,&#x27;项目自动保存&#x27;,8.4)]),dir(&#x27;otherapps&#x27;,&#x27;其他应用&#x27;,[file(&#x27;oa1&#x27;,&#x27;应用数据&#x27;,5.8)])]),
+        dir(&#x27;caches&#x27;,&#x27;Caches&#x27;,[file(&#x27;ca1&#x27;,&#x27;Chrome 媒体缓存&#x27;,6.8),file(&#x27;ca2&#x27;,&#x27;pip 下载缓存&#x27;,8.2,7),file(&#x27;ca3&#x27;,&#x27;Adobe 媒体缓存&#x27;,8.4,3)],{rule:&#x27;cache&#x27;})
+      ],{pathName:&#x27;Library&#x27;,category:&#x27;library&#x27;}),
+      dir(&#x27;movies&#x27;,&#x27;影片&#x27;,[dir(&#x27;footage&#x27;,&#x27;球场拍摄素材&#x27;,[file(&#x27;mv1&#x27;,&#x27;周六全场原片.mov&#x27;,28.4,1),file(&#x27;mv2&#x27;,&#x27;云台测试原片.mov&#x27;,14.2,2)],{rule:&#x27;personal&#x27;}),dir(&#x27;recordings&#x27;,&#x27;屏幕录制&#x27;,[file(&#x27;sc1&#x27;,&#x27;产品演示 09-12.mov&#x27;,8.2,0),file(&#x27;sc2&#x27;,&#x27;模型训练回放.mov&#x27;,7.4,8),file(&#x27;sc3&#x27;,&#x27;调试录屏.mov&#x27;,6,7)]),dir(&#x27;exports&#x27;,&#x27;导出视频&#x27;,[file(&#x27;ex1&#x27;,&#x27;研发日常_final.mp4&#x27;,8.4,1),file(&#x27;ex2&#x27;,&#x27;研发日常_v2.mp4&#x27;,3.8,1)])],{pathName:&#x27;Movies&#x27;,category:&#x27;movies&#x27;}),
+      dir(&#x27;downloads&#x27;,&#x27;下载&#x27;,[dir(&#x27;installers&#x27;,&#x27;安装包&#x27;,[file(&#x27;in1&#x27;,&#x27;DaVinci Resolve.dmg&#x27;,8.4,8),file(&#x27;in2&#x27;,&#x27;Docker.dmg&#x27;,4.8,7),file(&#x27;in3&#x27;,&#x27;Creative Cloud.dmg&#x27;,5.4,9)],{rule:&#x27;installer&#x27;}),dir(&#x27;compressed&#x27;,&#x27;压缩包&#x27;,[file(&#x27;zip1&#x27;,&#x27;training-materials.zip&#x27;,12.4,8),file(&#x27;zip2&#x27;,&#x27;project-backup.zip&#x27;,7,11)],{rule:&#x27;unknown&#x27;}),dir(&#x27;downloads-other&#x27;,&#x27;其他下载&#x27;,[file(&#x27;do1&#x27;,&#x27;参考比赛.mp4&#x27;,7.2,2),file(&#x27;do2&#x27;,&#x27;设计参考合集.pdf&#x27;,3,9)])],{pathName:&#x27;Downloads&#x27;,category:&#x27;downloads&#x27;}),
+      dir(&#x27;projects&#x27;,&#x27;项目&#x27;,[dir(&#x27;spacejudge&#x27;,&#x27;SpaceJudge&#x27;,[dir(&#x27;dependencies&#x27;,&#x27;node_modules&#x27;,[file(&#x27;nm1&#x27;,&#x27;开发依赖&#x27;,9.6)],{rule:&#x27;dependencies&#x27;}),dir(&#x27;dist&#x27;,&#x27;dist&#x27;,[file(&#x27;di1&#x27;,&#x27;构建输出&#x27;,3.6)],{rule:&#x27;build&#x27;}),dir(&#x27;source&#x27;,&#x27;src&#x27;,[file(&#x27;so1&#x27;,&#x27;源代码与素材&#x27;,3.2)],{rule:&#x27;personal&#x27;})]),dir(&#x27;likesports&#x27;,&#x27;LikeSports&#x27;,[dir(&#x27;build&#x27;,&#x27;build&#x27;,[file(&#x27;bu1&#x27;,&#x27;iOS 中间产物&#x27;,8.4),file(&#x27;bu2&#x27;,&#x27;Android 中间产物&#x27;,3.4)],{rule:&#x27;build&#x27;}),dir(&#x27;like-source&#x27;,&#x27;源码与资源&#x27;,[file(&#x27;ls1&#x27;,&#x27;业务代码与图像资源&#x27;,6.4)],{rule:&#x27;personal&#x27;})]),dir(&#x27;examples&#x27;,&#x27;示例工程&#x27;,[file(&#x27;eg1&#x27;,&#x27;Vision samples&#x27;,8,10)])],{pathName:&#x27;Projects&#x27;,category:&#x27;projects&#x27;}),
+      dir(&#x27;pictures&#x27;,&#x27;照片&#x27;,[file(&#x27;photos&#x27;,&#x27;Photos Library.photoslibrary&#x27;,28.6,0,{rule:&#x27;personal&#x27;}),dir(&#x27;picture-exports&#x27;,&#x27;导出图片&#x27;,[file(&#x27;pe1&#x27;,&#x27;球场精选&#x27;,3.8,1),file(&#x27;pe2&#x27;,&#x27;产品截图&#x27;,1.8,9)])],{pathName:&#x27;Pictures&#x27;,category:&#x27;pictures&#x27;}),
+      dir(&#x27;documents&#x27;,&#x27;文稿&#x27;,[dir(&#x27;work&#x27;,&#x27;工作文稿&#x27;,[file(&#x27;wo1&#x27;,&#x27;产品与研发资料&#x27;,7.8)]),dir(&#x27;reference&#x27;,&#x27;参考资料&#x27;,[file(&#x27;re1&#x27;,&#x27;课程与技术文档&#x27;,5.2,12)]),dir(&#x27;contracts&#x27;,&#x27;合同与归档&#x27;,[file(&#x27;co1&#x27;,&#x27;公司文件&#x27;,3.4,14)],{rule:&#x27;personal&#x27;})],{pathName:&#x27;Documents&#x27;,category:&#x27;documents&#x27;})
+    ]);
+    const nodes=new Map();
+    function index(n,parent=null,category=null){n.parent=parent;n.category=n.category||category;n.path=parent?parent.path+&#x27;/&#x27;+(n.pathName||n.name):&#x27;/Users/lin&#x27;;if(n.children){n.children.forEach(c=&gt;index(c,n,n.category));n.size=n.children.reduce((v,c)=&gt;v+c.size,0)}nodes.set(n.id,n)}index(data);
+    const colors={library:[&#x27;#dae8de&#x27;,&#x27;#e7efe9&#x27;],movies:[&#x27;#dce6ee&#x27;,&#x27;#e8eef3&#x27;],downloads:[&#x27;#eee4d5&#x27;,&#x27;#f4ede2&#x27;],projects:[&#x27;#e5e1ef&#x27;,&#x27;#eeebf5&#x27;],pictures:[&#x27;#eaddd2&#x27;,&#x27;#f2e9e1&#x27;],documents:[&#x27;#e1e8d9&#x27;,&#x27;#eaf0e4&#x27;]};
+    const tagColors={red:&#x27;#cb8179&#x27;,yellow:&#x27;#ccab55&#x27;,green:&#x27;#58a77a&#x27;,blue:&#x27;#779fbd&#x27;};
+    const tagNames={red:&#x27;需要保留&#x27;,yellow:&#x27;稍后确认&#x27;,green:&#x27;可以处理&#x27;,blue:&#x27;已检查&#x27;};
+    const state={focus:&#x27;home&#x27;,selected:&#x27;library&#x27;,detail:2,filter:&#x27;&#x27;,expanded:new Set(),tags:{},queue:new Set(),removed:new Set(),history:[&#x27;home&#x27;],historyIndex:0,progress:100,scanning:false,paused:false,tour:-1,ai:{},followup:&#x27;&#x27;,undo:[]};
+    const visual={palette:&#x27;柔和分区&#x27;,radius:7};
+    let predicate=()=&gt;true,scanTimer=null,clickTimer=null,toastTimer=null,mapRAF=null;
+    const fmt=n=&gt;Number(n.toFixed(1)).toFixed(1);
+    const isRemoved=n=&gt;state.removed.has(n.id)||(n.parent&amp;&amp;isRemoved(n.parent));
+    const fullSize=n=&gt;isRemoved(n)?0:n.children?n.children.reduce((v,c)=&gt;v+fullSize(c),0):n.size;
+    const leafCount=n=&gt;isRemoved(n)?0:n.children?n.children.reduce((v,c)=&gt;v+leafCount(c),0):1;
+    function tagged(n){return state.tags[n.id]||(n.parent?tagged(n.parent):null)}
+    function inheritedRule(n){return n.rule||(n.parent?inheritedRule(n.parent):&#x27;unknown&#x27;)}
+    function findTop(n){while(n.parent&amp;&amp;n.parent!==data)n=n.parent;return n}
+    function scanned(n){if(n===data||state.progress&gt;=100)return true;return data.children.indexOf(findTop(n))&lt;Math.ceil(state.progress/100*data.children.length)}
+    function filtered(n){if(isRemoved(n)||!scanned(n))return null;if(n.children){const children=n.children.map(filtered).filter(Boolean);const size=children.reduce((v,c)=&gt;v+c.value,0);return size?{node:n,value:size,children}:null}return predicate(n)?{node:n,value:n.size}:null}
+    function parseFilter(text){const parts=text.toLowerCase().split(&#x27;;&#x27;).map(t=&gt;t.trim()).filter(Boolean);return parts.map(part=&gt;{let inverse=part.startsWith(&#x27;|&#x27;);if(inverse)part=part.slice(1);if(!part)throw Error(&#x27;“|” 后面需要筛选条件，例如 |*.dmg&#x27;);let fn;if(part.startsWith(&#x27;:&#x27;)){const tag=part.slice(1);if(![&#x27;red&#x27;,&#x27;yellow&#x27;,&#x27;green&#x27;,&#x27;blue&#x27;,&#x27;all&#x27;].includes(tag))throw Error(&#x27;支持的标记：:red、:yellow、:green、:blue、:all&#x27;);fn=n=&gt;tag===&#x27;all&#x27;?!!tagged(n):tagged(n)===tag}else if(/^[&lt;&gt;]/.test(part)){const m=part.match(/^([&lt;&gt;])(\d+(?:\.\d+)?)\s*(gb|mb|kb|tb|months?|years?|days?)$/);if(!m)throw Error(&#x27;请使用 &gt;10gb、&lt;500mb、&gt;6months 这类格式。&#x27;);const num=Number(m[2]);const unit=m[3];let value;if(/b$/.test(unit)){const factor={gb:1,mb:1/1000,kb:1e-6,tb:1000}[unit];value=n=&gt;n.size/(factor)}else{value=n=&gt;n.months*(unit.startsWith(&#x27;year&#x27;)?1/12:unit.startsWith(&#x27;day&#x27;)?30:1)}fn=n=&gt;m[1]===&#x27;&gt;&#x27;?value(n)&gt;num:value(n)&lt;num}else{const pattern=part.replace(/[.+^${}()|[\]\\]/g,&#x27;\\$&amp;&#x27;).replace(/\*/g,&#x27;.*&#x27;).replace(/\?/g,&#x27;.&#x27;);const re=new RegExp(part.includes(&#x27;*&#x27;)?&#x27;^&#x27;+pattern+&#x27;$&#x27;:pattern,&#x27;i&#x27;);fn=n=&gt;re.test(n.name)}return n=&gt;inverse?!fn(n):fn(n)})}
+    function setFilter(text){try{const tests=parseFilter(text);predicate=n=&gt;tests.every(f=&gt;f(n));state.filter=text;$(&#x27;#sj-filter&#x27;).value=text;$(&#x27;#sj-filter-error&#x27;).hidden=true;const visible=filtered(nodes.get(state.focus));if(text)state.selected=visible?.children?.[0]?.node.id||state.focus;render();persist()}catch(err){$(&#x27;#sj-filter-error&#x27;).textContent=err.message;$(&#x27;#sj-filter-error&#x27;).hidden=false}}
+    function icons(){if(globalThis.lucide)globalThis.lucide.createIcons({attrs:{width:18,height:18}})}
+    function persist(){if(window.openai?.setWidgetState){window.openai.setWidgetState({modelContent:{view:state.focus,selected:state.selected,filter:state.filter,queue:[...state.queue],prototype:&#x27;SpaceJudge v0.1 — simulated files and AI&#x27;},privateContent:{detail:state.detail,tags:state.tags,removed:[...state.removed]}}).catch(()=&gt;{})}}
+    function restore(saved){if(!saved)return;const m=saved.modelContent||{},p=saved.privateContent||{};if(nodes.has(m.view))state.focus=m.view;if(nodes.has(m.selected))state.selected=m.selected;state.queue=new Set((m.queue||[]).filter(id=&gt;nodes.has(id)));state.removed=new Set((p.removed||[]).filter(id=&gt;nodes.has(id)));state.detail=Math.max(1,Math.min(4,p.detail||2));state.tags=p.tags||{};if(state.history[state.historyIndex]!==state.focus){state.history=[state.focus];state.historyIndex=0;}try{const tests=parseFilter(m.filter||&#x27;&#x27;);predicate=n=&gt;tests.every(f=&gt;f(n));state.filter=m.filter||&#x27;&#x27;}catch{state.filter=&#x27;&#x27;}$(&#x27;#sj-filter&#x27;).value=state.filter}
+    function navigate(id,record=true){const n=nodes.get(id);if(!n||!n.children||isRemoved(n))return;state.focus=id;state.selected=id;state.followup=&#x27;&#x27;;if(record){state.history=state.history.slice(0,state.historyIndex+1);state.history.push(id);state.historyIndex++}render();persist()}
+    function select(id,expand=true){if(!nodes.has(id))return;state.selected=id;state.followup=&#x27;&#x27;;if(expand&amp;&amp;nodes.get(id).children)state.expanded.add(id);renderInspector();drawMap();persist()}
+    function layout(items,x,y,w,h){if(!items.length||w&lt;=0||h&lt;=0)return[];const total=items.reduce((s,v)=&gt;s+v.value,0),scale=w*h/total;let pending=[...items].sort((a,b)=&gt;b.value-a.value).map(d=&gt;({...d,area:d.value*scale}));const rects=[];let row=[];const worst=(r,side)=&gt;{if(!r.length)return Infinity;const sum=r.reduce((s,v)=&gt;s+v.area,0);const areas=r.map(v=&gt;v.area);return Math.max(side*side*Math.max(...areas)/(sum*sum),sum*sum/(side*side*Math.min(...areas)))};function place(){const area=row.reduce((s,v)=&gt;s+v.area,0);if(w&gt;=h){const rw=area/h;let yy=y;row.forEach(d=&gt;{const rh=d.area/rw;rects.push({...d,x,y:yy,w:rw,h:rh});yy+=rh});x+=rw;w-=rw}else{const rh=area/w;let xx=x;row.forEach(d=&gt;{const rw=d.area/rh;rects.push({...d,x:xx,y,w:rw,h:rh});xx+=rw});y+=rh;h-=rh}row=[]}while(pending.length){const next=pending[0],side=Math.min(w,h);if(!row.length||worst([...row,next],side)&lt;=worst(row,side)){row.push(pending.shift())}else place()}if(row.length)place();return rects}
+    function drawMap(){const map=$(&#x27;#sj-treemap&#x27;);const current=filtered(nodes.get(state.focus));map.innerHTML=&#x27;&#x27;;const width=map.clientWidth,height=map.clientHeight;if(!current){map.innerHTML=&#x27;&lt;div class=&quot;sj-empty&quot;&gt;&lt;i data-lucide=&quot;scan-search&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;strong&gt;当前范围没有匹配项&lt;/strong&gt;&lt;span&gt;&#x27;+(state.progress&lt;100?&#x27;扫描尚未发现此目录，也可以先浏览其他位置。&#x27;:&#x27;试试更宽的条件，或给文件加上对应标记。&#x27;)+&#x27;&lt;/span&gt;&lt;button class=&quot;sj-button&quot; data-action=&quot;clear-filter&quot;&gt;清除筛选&lt;/button&gt;&lt;/div&gt;&#x27;;icons();return}function paint(entries,x,y,w,h,level,extraDepth=0){layout(entries,x,y,w,h).forEach(r=&gt;{const gap=level===1?3:2,rx=r.x+gap/2,ry=r.y+gap/2,rw=Math.max(0,r.w-gap),rh=Math.max(0,r.h-gap);if(rw&lt;3||rh&lt;3)return;const n=r.node;const localExtra=extraDepth+(state.expanded.has(n.id)?1:0);const expanded=!!r.children&amp;&amp;(level&lt;state.detail+localExtra)&amp;&amp;rw&gt;92&amp;&amp;rh&gt;88;const tile=document.createElement(&#x27;div&#x27;);tile.className=&#x27;sj-tile&#x27;+(expanded?&#x27; has-children&#x27;:&#x27;&#x27;);tile.style.cssText=`left:${rx}px;top:${ry}px;width:${rw}px;height:${rh}px;--tile-fill:${(colors[n.category]||colors.library)[level%2===0?1:0]}`;tile.dataset.node=n.id;const hit=document.createElement(&#x27;button&#x27;);hit.className=&#x27;sj-tile-hit&#x27;+(state.selected===n.id?&#x27; selected&#x27;:&#x27;&#x27;);hit.type=&#x27;button&#x27;;hit.dataset.nodeAction=n.id;hit.setAttribute(&#x27;aria-label&#x27;,`${n.name}，${fmt(r.value)} GB，${n.children?&#x27;目录，单击展开，双击进入&#x27;:&#x27;文件，单击查看&#x27;}`);hit.setAttribute(&#x27;aria-pressed&#x27;,state.selected===n.id?&#x27;true&#x27;:&#x27;false&#x27;);if(rw&gt;44&amp;&amp;rh&gt;34){hit.innerHTML=`&lt;span class=&quot;sj-tile-name&quot;&gt;${n.children?&#x27;&lt;span class=&quot;sj-dir-glyph&quot; aria-hidden=&quot;true&quot;&gt;▱&lt;/span&gt;&#x27;:&#x27;&#x27;}${esc(n.name)}&lt;/span&gt;${rh&gt;58||expanded?`&lt;span class=&quot;sj-tile-size&quot;&gt;${fmt(r.value)} GB&lt;/span&gt;`:&#x27;&#x27;}`}const tag=tagged(n);if(tag){hit.innerHTML+=`&lt;span class=&quot;sj-tagdot&quot; style=&quot;background:${tagColors[tag]}&quot; aria-label=&quot;${tagNames[tag]}&quot;&gt;&lt;/span&gt;`}tile.appendChild(hit);map.appendChild(tile);if(expanded)paint(r.children,rx+4,ry+29,rw-8,rh-33,level+1,localExtra)})}paint(current.children||[current],0,0,width,height,1);map.classList.toggle(&#x27;sj-neutral&#x27;,visual.palette===&#x27;统一浅灰&#x27;);}
+    const ruleCopy={
+      derived:{title:&#x27;可以考虑清理，首次构建会变慢。&#x27;,body:&#x27;这是 Xcode 的中间构建与索引数据。先结束正在进行的构建；清理后项目通常需要重新编译和建立索引。&#x27;,evidence:[&#x27;示例路径位于 Library/Developer/DerivedData。&#x27;,&#x27;该类别用于派生构建数据；未验证当前构建状态。&#x27;,&#x27;本原型没有检查真实项目或读取任何文件。&#x27;],impact:&#x27;下一次编译和代码索引可能更慢。建议关闭相关构建任务后，再通过 Xcode 或明确的目录操作处理。&#x27;,safe:true},
+      cache:{title:&#x27;存在可重建缓存，需要逐项确认。&#x27;,body:&#x27;这里包含浏览器、包管理器和创作软件缓存。可以先检查各应用的清理入口，避免影响正在使用的离线内容。&#x27;,evidence:[&#x27;示例被明确归类为 Caches。&#x27;,&#x27;路径本身不能证明其中每个文件都可删除。&#x27;,&#x27;正式版需要按应用规则校验，排除正在使用的项目。&#x27;],impact:&#x27;可能重新下载资源、重建预览或退出部分离线状态。清理前需要确认应用和具体子目录。&#x27;,safe:true},
+      installer:{title:&#x27;安装包值得优先检查。&#x27;,body:&#x27;这组 .dmg 安装包已超过半年未修改。请先确认应用已经安装，且不需要保留这个版本的离线安装介质。&#x27;,evidence:[&#x27;示例扩展名为 .dmg，共 3 个安装包。&#x27;,&#x27;模拟修改时间距基准日超过 6 个月。&#x27;,&#x27;未修改时间不等于未使用；尚未核验应用安装状态。&#x27;],impact:&#x27;已安装的应用通常不会因移走独立安装包而卸载，但之后重装或回退版本可能需要重新下载。&#x27;,safe:true},
+      build:{title:&#x27;可能是可重建的构建输出。&#x27;,body:&#x27;目录被示例规则识别为构建产物。先确认源码、依赖和构建流程可用，再检查是否混入唯一的发布文件。&#x27;,evidence:[&#x27;示例目录名为 build 或 dist。&#x27;,&#x27;仅靠目录名不足以证明全部内容可重建。&#x27;,&#x27;正式版需要检查项目配置与文件来源。&#x27;],impact:&#x27;下次运行需要重新构建。若目录内混入手工文件或唯一发布包，直接删除可能造成损失。&#x27;,safe:true},
+      dependencies:{title:&#x27;依赖可重新安装，但有恢复成本。&#x27;,body:&#x27;这里是示例项目的 node_modules。需要确认依赖清单、锁文件和包源可用，并排除本地修改的依赖。&#x27;,evidence:[&#x27;目录位于示例项目内。&#x27;,&#x27;没有核验锁文件、网络可用性和本地依赖改动。&#x27;],impact:&#x27;项目会暂时无法运行；恢复需要重新安装依赖，不能承诺所有旧版本都仍然可下载。&#x27;,safe:true},
+      personal:{title:&#x27;建议保留，价值需要你判断。&#x27;,body:&#x27;这里包含个人内容、聊天记录、源代码或原始素材。占用大并不能说明它可以清理，优先考虑备份、归档或应用内管理。&#x27;,evidence:[&#x27;示例被标记为个人数据。&#x27;,&#x27;没有核验备份或其他副本。&#x27;,&#x27;AI 无法仅凭大小和文件名判断内容价值。&#x27;],impact:&#x27;可能失去聊天附件、照片原件或项目源码。这个原型不把它推荐到清理清单。&#x27;,safe:false},
+      archive:{title:&#x27;归档可能仍用于发布和排查。&#x27;,body:&#x27;旧版 Xcode 归档可能包含发布记录和调试所需内容。确认版本留存与备份策略后，再决定处理哪些归档。&#x27;,evidence:[&#x27;示例文件包含 .xcarchive。&#x27;,&#x27;年龄较旧不代表已无用途。&#x27;],impact:&#x27;可能影响旧版本导出、归档追溯或问题排查。建议保留仍需维护的版本。&#x27;,safe:false},
+      unknown:{title:&#x27;信息还不够，先查看内容。&#x27;,body:&#x27;目前没有足够依据判断这个目录能否清理。可以继续展开，找到具体内容，再判断用途和恢复方式。&#x27;,evidence:[&#x27;当前仅有模拟路径、类型、大小和修改时间。&#x27;,&#x27;未核验备份、应用关联或内容是否可重建。&#x27;],impact:&#x27;无法可靠判断。建议先查看子目录；不要把同名文件或旧修改时间当作可清理证据。&#x27;,safe:false}
+    };
+    function copyFor(n){if(n.id===&#x27;library&#x27;)return{title:&#x27;这里有缓存，也有需要保留的应用数据。&#x27;,body:&#x27;可以先查看 Developer 和 Caches；Containers 中可能包含聊天记录、应用文档等个人内容，建议逐层判断。&#x27;,evidence:[&#x27;94.8 GB 为这组演示目录的初始合计。&#x27;,&#x27;Developer、Caches 和 Containers 用途不同，不能整组清理。&#x27;],impact:&#x27;整组清理资源库可能破坏应用数据。先进入具体子目录，再检查其用途。&#x27;,safe:false};return ruleCopy[inheritedRule(n)]||ruleCopy.unknown}
+    function renderInspector(){const n=nodes.get(state.selected)||data,c=copyFor(n),size=fullSize(n),tag=state.tags[n.id];const matched=filtered(n)?.value||0;const focusSize=filtered(nodes.get(state.focus))?.value||0;const share=focusSize?matched/focusSize*100:0;$(&#x27;#sj-inspector-content&#x27;).innerHTML=`&lt;div class=&quot;sj-objecticon&quot;&gt;&lt;i data-lucide=&quot;${n.children?&#x27;folder&#x27;:&#x27;file&#x27;}&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/div&gt;&lt;h2 class=&quot;sj-object-name&quot;&gt;${esc(n.name)}&lt;/h2&gt;&lt;p class=&quot;sj-object-path&quot;&gt;${esc(n.path)}&lt;/p&gt;&lt;dl class=&quot;sj-meta&quot;&gt;&lt;div&gt;&lt;dt&gt;${state.filter?&#x27;匹配文件占用&#x27;:&#x27;目录内占用&#x27;}&lt;/dt&gt;&lt;dd&gt;${fmt(state.filter?matched:size)} GB&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;${state.filter?&#x27;筛选内占比&#x27;:&#x27;占当前视图&#x27;}&lt;/dt&gt;&lt;dd&gt;${share&gt;100?&#x27;—&#x27;:share.toFixed(1)+&#x27;%&#x27;}&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;${n.children?&#x27;包含内容&#x27;:&#x27;文件类型&#x27;}&lt;/dt&gt;&lt;dd&gt;${n.children?leafCount(n)+&#x27; 个示例文件&#x27;:esc(n.name.includes(&#x27;.&#x27;)?n.name.split(&#x27;.&#x27;).pop().toUpperCase():&#x27;模拟数据文件&#x27;)}&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;${n.children?&#x27;扫描状态&#x27;:&#x27;修改于&#x27;}&lt;/dt&gt;&lt;dd&gt;${n.children?(scanned(n)?&#x27;已发现 · 示例&#x27;:&#x27;等待扫描&#x27;):(n.months?n.months+&#x27; 个月前&#x27;:&#x27;本月&#x27;)}&lt;/dd&gt;&lt;/div&gt;&lt;/dl&gt;&lt;section class=&quot;sj-ai&quot;&gt;&lt;div class=&quot;sj-ai-heading&quot;&gt;&lt;i data-lucide=&quot;sparkles&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;AI 空间判断&lt;small&gt;预设内容&lt;/small&gt;&lt;/div&gt;&lt;div class=&quot;sj-answer&quot;&gt;&lt;p&gt;&lt;strong&gt;${c.title}&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;${c.body}&lt;/p&gt;&lt;/div&gt;&lt;details class=&quot;sj-evidence&quot;&gt;&lt;summary&gt;查看判断依据与边界&lt;/summary&gt;&lt;ul&gt;${c.evidence.map(t=&gt;&#x27;&lt;li&gt;&#x27;+t+&#x27;&lt;/li&gt;&#x27;).join(&#x27;&#x27;)}&lt;/ul&gt;&lt;/details&gt;&lt;div class=&quot;sj-question-row&quot;&gt;&lt;button data-action=&quot;ask-impact&quot;&gt;处理后会怎样？&lt;/button&gt;&lt;button data-action=&quot;ask-recover&quot;&gt;能恢复吗？&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;sj-followup&quot; id=&quot;sj-followup&quot; ${state.followup?&#x27;&#x27;:&#x27;hidden&#x27;}&gt;${esc(state.followup)}&lt;/div&gt;&lt;/section&gt;&lt;div class=&quot;sj-tags&quot;&gt;&lt;span&gt;检查标记&lt;/span&gt;${Object.entries(tagColors).map(([key,color])=&gt;`&lt;button class=&quot;sj-tag-button${tag===key?&#x27; active&#x27;:&#x27;&#x27;}&quot; data-tag=&quot;${key}&quot; style=&quot;--tag:${color}&quot; aria-label=&quot;标记为${tagNames[key]}&quot; aria-pressed=&quot;${tag===key}&quot;&gt;&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;button class=&quot;sj-textbutton&quot; data-action=&quot;clear-tag&quot; style=&quot;color:#8d9991;margin-left:auto&quot;&gt;清除&lt;/button&gt;&lt;/div&gt;`;
+      $(&#x27;#sj-inspect-actions&#x27;).innerHTML=`${n.children?&#x27;&lt;button class=&quot;sj-button&quot; data-action=&quot;enter-selected&quot;&gt;&lt;i data-lucide=&quot;folder-open&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;进入这个目录&lt;/button&gt;&#x27;:&#x27;&lt;button class=&quot;sj-button&quot; data-action=&quot;preview&quot;&gt;&lt;i data-lucide=&quot;scan-eye&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;预览示例文件&lt;/button&gt;&#x27;}${c.safe?`&lt;button class=&quot;sj-button sj-primary&quot; data-action=&quot;add-queue&quot; ${size===0?&#x27;disabled&#x27;:&#x27;&#x27;}&gt;&lt;i data-lucide=&quot;list-plus&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;${state.queue.has(n.id)?&#x27;已加入 · 查看清单&#x27;:&#x27;加入清理清单&#x27;}&lt;/button&gt;`:&#x27;&lt;button class=&quot;sj-button&quot; data-action=&quot;mark-keep&quot;&gt;&lt;i data-lucide=&quot;bookmark&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;标记为保留&lt;/button&gt;&#x27;}&lt;button class=&quot;sj-button sj-quiet&quot; data-action=&quot;finder&quot;&gt;&lt;i data-lucide=&quot;external-link&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;在 Finder 中显示 · 模拟&lt;/button&gt;&lt;p class=&quot;sj-inspect-footnote&quot;&gt;此处判断为交互示例，不是真实扫描结论。&lt;/p&gt;`;icons()}
+    function render(){const focus=nodes.get(state.focus)||data,v=filtered(focus);$(&#x27;#sj-view-name&#x27;).textContent=focus.name;$(&#x27;#sj-view-subtitle&#x27;).textContent=focus.path;$(&#x27;#sj-view-size&#x27;).textContent=fmt(v?v.value:0);$(&#x27;#sj-view-count&#x27;).textContent=state.filter?&#x27;筛选匹配占用 · 示例&#x27;:state.progress&lt;100?&#x27;已发现占用 · 模拟扫描&#x27;:&#x27;目录内占用 · 示例&#x27;;$(&#x27;#sj-detail-level&#x27;).textContent=state.detail;$(&#x27;[data-action=&quot;less-detail&quot;]&#x27;).disabled=state.detail&lt;=1;$(&#x27;[data-action=&quot;more-detail&quot;]&#x27;).disabled=state.detail&gt;=4;$(&#x27;[data-action=&quot;back&quot;]&#x27;).disabled=state.historyIndex===0;$(&#x27;[data-action=&quot;forward&quot;]&#x27;).disabled=state.historyIndex&gt;=state.history.length-1;$(&#x27;[data-action=&quot;up&quot;]&#x27;).disabled=state.focus===&#x27;home&#x27;;let path=[];for(let n=focus;n;n=n.parent)path.unshift(n);$(&#x27;#sj-crumbs&#x27;).innerHTML=path.map((n,i)=&gt;(i?&#x27;&lt;span&gt;›&lt;/span&gt;&#x27;:&#x27;&#x27;)+`&lt;button data-location=&quot;${n.id}&quot;&gt;${esc(n.name)}&lt;/button&gt;`).join(&#x27;&#x27;);$$(&#x27;.sj-location[data-location]&#x27;).forEach(b=&gt;b.classList.toggle(&#x27;active&#x27;,b.dataset.location===state.focus));$$(&#x27;.sj-chip&#x27;).forEach(b=&gt;b.classList.toggle(&#x27;active&#x27;,b.dataset.filter===state.filter));$(&#x27;#sj-queue-count&#x27;).textContent=state.queue.size;$(&#x27;#sj-queue-count&#x27;).hidden=!state.queue.size;$(&#x27;#sj-file-count&#x27;).textContent=&#x27;· &#x27;+(v?countView(v):0)+&#x27; 个示例文件&#x27;;$(&#x27;#sj-map-caption&#x27;).textContent=state.filter?&#x27;已按匹配文件重新布局 · &#x27;+state.filter:&#x27;面积代表占用大小 · 颜色区分目录&#x27;;$(&#x27;#sj-trash-status&#x27;).textContent=state.removed.size?&#x27;模拟废纸篓 &#x27;+fmt(removedSize())+&#x27; GB · 可用空间未增加&#x27;:&#x27;本地演示 · 未读取你的磁盘&#x27;;renderScan();renderInspector();drawMap();icons()}
+    function countView(v){return v.children?v.children.reduce((s,c)=&gt;s+countView(c),0):1}
+    function removedSize(){return [...state.removed].reduce((s,id)=&gt;s+nodes.get(id).size,0)}
+    function renderScan(){$(&#x27;#sj-scan-status&#x27;).textContent=state.scanning?(state.paused?&#x27;演示扫描已暂停&#x27;:&#x27;演示扫描中&#x27;)+&#x27; · &#x27;+state.progress+&#x27;%&#x27;:state.progress&lt;100?&#x27;演示扫描已停止 · 结果不完整&#x27;:&#x27;示例扫描完成&#x27;;$(&#x27;#sj-scanbar&#x27;).hidden=!state.scanning;$(&#x27;#sj-scanbar span&#x27;).style.width=state.progress+&#x27;%&#x27;;$(&#x27;[data-action=&quot;pause-scan&quot;]&#x27;).hidden=!state.scanning;$(&#x27;[data-action=&quot;pause-scan&quot;]&#x27;).textContent=state.paused?&#x27;继续&#x27;:&#x27;暂停&#x27;;$(&#x27;[data-action=&quot;stop-scan&quot;]&#x27;).hidden=!state.scanning;$(&#x27;[data-action=&quot;rescan&quot;]&#x27;).hidden=state.scanning}
+    function startScan(){clearInterval(scanTimer);state.progress=0;state.scanning=true;state.paused=false;render();scanTimer=setInterval(()=&gt;{if(state.paused)return;state.progress=Math.min(100,state.progress+5);render();if(state.progress===100){clearInterval(scanTimer);state.scanning=false;render();toast(&#x27;演示扫描完成。这里的时间不代表原生版本扫描性能。&#x27;)}},550)}
+    function toast(text,undo=false){clearTimeout(toastTimer);$(&#x27;#sj-toast&#x27;).innerHTML=`&lt;span&gt;${esc(text)}&lt;/span&gt;${undo?&#x27;&lt;button data-action=&quot;undo&quot;&gt;撤销&lt;/button&gt;&#x27;:&#x27;&#x27;}`;$(&#x27;#sj-toast&#x27;).hidden=false;toastTimer=setTimeout(()=&gt;$(&#x27;#sj-toast&#x27;).hidden=true,undo?11000:4500)}
+    function modal(title,body,foot=&#x27;&#x27;){const d=$(&#x27;#sj-dialog&#x27;);$(&#x27;#sj-dialog-title&#x27;).textContent=title;$(&#x27;#sj-dialog-body&#x27;).innerHTML=body;$(&#x27;#sj-dialog-foot&#x27;).innerHTML=foot||&#x27;&lt;span&gt;所有操作仅作用于演示数据&lt;/span&gt;&lt;button class=&quot;sj-button&quot; data-action=&quot;close-dialog&quot;&gt;知道了&lt;/button&gt;&#x27;;if(!d.open)d.showModal();icons()}
+    function closeModal(){$(&#x27;#sj-dialog&#x27;).close()}
+    const isAncestor=(a,b)=&gt;{for(let n=b;n;n=n.parent)if(n.id===a.id)return true;return false};
+    function addQueue(id=state.selected){const n=nodes.get(id);if(!copyFor(n).safe||isRemoved(n))return;if(state.queue.has(id)){showQueue();return}for(const q of state.queue){if(isAncestor(nodes.get(q),n)){toast(&#x27;上级目录已在清单中，不重复计算占用。&#x27;);return}if(isAncestor(n,nodes.get(q)))state.queue.delete(q)}state.queue.add(id);render();persist();toast(n.name+&#x27; 已加入清单，尚未处理。&#x27;)}
+    function showQueue(){const items=[...state.queue].map(id=&gt;nodes.get(id)),size=items.reduce((s,n)=&gt;s+fullSize(n),0);modal(&#x27;清理清单&#x27;,items.length?`&lt;div class=&quot;sj-intro-box&quot;&gt;先确认用途，再处理。清单只包含你主动加入的项目，不会自动勾选其他文件。&lt;/div&gt;${items.map(n=&gt;`&lt;div class=&quot;sj-suggestion&quot;&gt;&lt;div class=&quot;sj-suggestion-main&quot;&gt;&lt;strong&gt;${esc(n.name)}&lt;/strong&gt;&lt;p&gt;${esc(n.path)}&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;sj-suggestion-size&quot;&gt;${fmt(fullSize(n))} GB&lt;/span&gt;&lt;button class=&quot;sj-icon-button&quot; data-remove-queue=&quot;${n.id}&quot; aria-label=&quot;从清单移除 ${esc(n.name)}&quot;&gt;×&lt;/button&gt;&lt;/div&gt;`).join(&#x27;&#x27;)}&lt;p style=&quot;margin-top:18px;font-size:11px&quot;&gt;模拟移入废纸篓后，文件会从原目录图中移除，但仍然占用磁盘。只有最终删除后才可能释放空间；真实收益仍需重新测量。&lt;/p&gt;`:&#x27;&lt;div class=&quot;sj-queue-empty&quot;&gt;&lt;h3&gt;清单还是空的&lt;/h3&gt;&lt;p&gt;选中一个可处理的示例目录，查看依据后加入清单。&lt;/p&gt;&lt;button class=&quot;sj-button&quot; data-action=&quot;suggestions&quot; style=&quot;margin-top:15px&quot;&gt;查看建议&lt;/button&gt;&lt;/div&gt;&#x27;,`&lt;span&gt;${items.length} 项 · 目录占用合计 &lt;b&gt;${fmt(size)} GB&lt;/b&gt;&lt;/span&gt;&lt;div class=&quot;sj-flex&quot;&gt;${state.undo.length?&#x27;&lt;button class=&quot;sj-button&quot; data-action=&quot;undo&quot;&gt;撤销上次模拟&lt;/button&gt;&#x27;:&#x27;&#x27;}&lt;button class=&quot;sj-button sj-primary&quot; data-action=&quot;simulate-trash&quot; ${items.length?&#x27;&#x27;:&#x27;disabled&#x27;}&gt;模拟移入废纸篓&lt;/button&gt;&lt;/div&gt;`)}
+    function simulateTrash(){const ids=[...state.queue];if(!ids.length)return;state.undo.push({ids,removed:[...state.removed],selected:state.selected,focus:state.focus});ids.forEach(id=&gt;{for(const old of state.removed){if(isAncestor(nodes.get(id),nodes.get(old)))state.removed.delete(old)}state.removed.add(id)});state.queue.clear();if(isRemoved(nodes.get(state.focus)))state.focus=&#x27;home&#x27;;state.selected=state.focus;render();persist();showQueue();toast(&#x27;已模拟移入废纸篓；磁盘可用空间没有增加。&#x27;,true)}
+    function undo(){const last=state.undo.pop();if(!last)return;state.removed=new Set(last.removed);state.selected=last.selected;state.focus=last.focus;render();persist();if($(&#x27;#sj-dialog&#x27;).open)showQueue();toast(&#x27;已恢复上次模拟移走的项目。&#x27;)}
+    const suggestions=[&#x27;derived&#x27;,&#x27;installers&#x27;,&#x27;build&#x27;,&#x27;caches&#x27;];
+    function showSuggestions(){modal(&#x27;值得先检查的空间&#x27;,`&lt;div class=&quot;sj-intro-box&quot;&gt;按“用途容易确认、处理收益明显”组织的预设示例。它们是候选项，需要查看影响；这里没有真实 AI 调用。&lt;/div&gt;${suggestions.filter(id=&gt;!isRemoved(nodes.get(id))).map(id=&gt;{const n=nodes.get(id);return `&lt;div class=&quot;sj-suggestion&quot;&gt;&lt;div class=&quot;sj-objecticon&quot; style=&quot;width:34px;height:34px;margin:0&quot;&gt;&lt;i data-lucide=&quot;${id===&#x27;installers&#x27;?&#x27;package&#x27;:&#x27;folder&#x27;}&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/div&gt;&lt;div class=&quot;sj-suggestion-main&quot;&gt;&lt;strong&gt;${esc(n.name)}&lt;/strong&gt;&lt;p&gt;${copyFor(n).title}&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;sj-suggestion-size&quot;&gt;${fmt(fullSize(n))} GB&lt;/span&gt;&lt;button class=&quot;sj-button&quot; data-inspect=&quot;${id}&quot;&gt;查看依据&lt;/button&gt;&lt;/div&gt;`}).join(&#x27;&#x27;)}&lt;h3&gt;默认保留的内容&lt;/h3&gt;&lt;p&gt;聊天记录、照片原件、源代码和发布归档，仅凭占用大小不能判断清理价值。&lt;/p&gt;`)}
+    function guide(){modal(&#x27;原型说明 · 从看见空间到做出判断&#x27;,`&lt;div class=&quot;sj-intro-box&quot;&gt;&lt;strong&gt;这是什么？&lt;/strong&gt;&lt;br&gt;SpaceJudge 的 macOS 浅色设计原型：以 SpaceSniffer 的嵌套空间图和直接操作为基础，用微信桌面端式的侧栏、细分隔线、浅灰底与绿色强调重新组织界面。&lt;/div&gt;&lt;h3&gt;先用 30 秒走一遍&lt;/h3&gt;&lt;p&gt;点击「跟着体验」，或者单击资源库 → 双击 Developer → 选中 DerivedData → 看右侧判断依据 → 加入清理清单。清单里可以模拟处理，并撤销。&lt;/p&gt;&lt;h3&gt;研究后保留的交互&lt;/h3&gt;&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;SpaceSniffer 的方式&lt;/th&gt;&lt;th&gt;本原型的对应操作&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;单击展开细节；双击放大目录&lt;/td&gt;&lt;td&gt;单击方块原位展开；双击目录进入，面包屑与前后退保留路径。&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;调整展示细节&lt;/td&gt;&lt;td&gt;「细节 − / +」控制 1–4 层；过小区域按空间限制聚合。&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;表达式筛选与重排&lt;/td&gt;&lt;td&gt;类型、大小、修改年龄、排除条件与标记；按 Enter 应用。&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;四种临时颜色标记&lt;/td&gt;&lt;td&gt;右侧四色标记；这版赋予“保留 / 确认 / 处理 / 已检查”含义，可清除。&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;扫描中浏览、右键操作&lt;/td&gt;&lt;td&gt;点击「演示重新扫描」体验渐进结果、暂停、继续和停止；右键显示原型菜单。&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;h3&gt;我们新增的设计&lt;/h3&gt;&lt;p&gt;右侧「文件洞察」随选中项更新，解释用途、证据和处理影响；你确认后再加入清理清单。空间地图的底色表示目录类别，右下的小圆点才是检查标记。旧文件不自动等于无用文件。&lt;/p&gt;&lt;h3&gt;筛选规则 · 本原型支持的子集&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;*.dmg&lt;/code&gt;：安装包；&lt;code&gt;&gt;10gb&lt;/code&gt;：单个文件大于 10 GB。&lt;/li&gt;&lt;li&gt;&lt;code&gt;&gt;6months&lt;/code&gt;：文件修改时间早于 6 个月前，不代表半年没用过。&lt;/li&gt;&lt;li&gt;&lt;code&gt;*.dmg;&gt;5gb&lt;/code&gt;：两个条件同时满足；&lt;code&gt;|*.dmg&lt;/code&gt;：排除安装包。&lt;/li&gt;&lt;li&gt;&lt;code&gt;:green&lt;/code&gt;：处理标记；&lt;code&gt;:all&lt;/code&gt;：所有已标记项目。目录标记在本原型中作用于子项。&lt;/li&gt;&lt;li&gt;筛选后矩形按匹配文件占用重新分配；默认 GB 使用十进制。&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;键盘操作&lt;/h3&gt;&lt;p&gt;&lt;span class=&quot;sj-shortcut&quot;&gt;⌘ F&lt;/span&gt; 筛选　&lt;span class=&quot;sj-shortcut&quot;&gt;⌘ ↑&lt;/span&gt; 上一级　&lt;span class=&quot;sj-shortcut&quot;&gt;⌘ 1–4&lt;/span&gt; 给选中项加四色标记。方块支持 Tab 聚焦与 Enter 选中，进入目录也可使用右侧按钮。&lt;/p&gt;&lt;h3&gt;哪些是真交互，哪些只是演示？&lt;/h3&gt;&lt;p&gt;地图布局、展开、进入、前进后退、筛选、标记、清单、模拟移除和撤销都可操作。文件树是人工构造的 312.6 GB 用户目录，修改年龄以 2026-09-26 为演示基准；磁盘容量也是模拟值。没有读取或删除本机文件，AI 文案为预设，Finder 操作为演示，不代表原生版本性能。&lt;/p&gt;&lt;h3&gt;尚未在这版实现&lt;/h3&gt;&lt;p&gt;真实全盘扫描与权限提示、FSEvents 增量更新、多磁盘 / 多窗口共享扫描、系统右键菜单、拖拽真实目录、导出报告、真实模型调用、APFS 克隆 / 快照 / 云文件占用校正。SpaceSniffer 的 NTFS 特性不直接移植到 Mac。&lt;/p&gt;&lt;h3&gt;资料来源与研究边界&lt;/h3&gt;&lt;p&gt;依据 &lt;a href=&quot;https://www.uderzo.it/main_products/space_sniffer/&quot; target=&quot;_blank&quot; rel=&quot;noreferrer&quot;&gt;SpaceSniffer 官方操作介绍&lt;/a&gt;、&lt;a href=&quot;https://www.uderzo.it/main_products/space_sniffer/features.html&quot; target=&quot;_blank&quot; rel=&quot;noreferrer&quot;&gt;官方功能说明&lt;/a&gt;和&lt;a href=&quot;https://apps.apple.com/cn/app/%E5%BE%AE%E4%BF%A1/id836500024?mt=12&quot; target=&quot;_blank&quot; rel=&quot;noreferrer&quot;&gt;腾讯微信 Mac 产品页&lt;/a&gt;。本轮为文档研究，未运行 Windows 版 SpaceSniffer；本设计重新绘制界面，不使用其源码或品牌素材。&lt;/p&gt;`,`&lt;span&gt;V0.1 · 产品交互讨论稿，非性能验证版本&lt;/span&gt;&lt;button class=&quot;sj-button sj-primary&quot; data-action=&quot;tour&quot;&gt;跟着体验&lt;/button&gt;`)}
+    function showLocation(){modal(&#x27;选择演示扫描位置&#x27;,&#x27;&lt;div class=&quot;sj-intro-box&quot;&gt;浏览器原型使用固定样例。这里的选择不会请求磁盘访问权限；真实选择器留到 macOS 原生版本。&lt;/div&gt;&#x27;+[&#x27;home&#x27;,&#x27;downloads&#x27;,&#x27;movies&#x27;,&#x27;projects&#x27;,&#x27;library&#x27;].map(id=&gt;{const n=nodes.get(id);return `&lt;div class=&quot;sj-suggestion&quot;&gt;&lt;div class=&quot;sj-suggestion-main&quot;&gt;&lt;strong&gt;${n.name}&lt;/strong&gt;&lt;p&gt;${esc(n.path)}&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;sj-suggestion-size&quot;&gt;${fmt(fullSize(n))} GB&lt;/span&gt;&lt;button class=&quot;sj-button&quot; data-pick-location=&quot;${id}&quot;&gt;浏览示例&lt;/button&gt;&lt;/div&gt;`}).join(&#x27;&#x27;))}
+    const tours=[{text:&#x27;&lt;b&gt;01 看见占用。&lt;/b&gt; 方块越大，占用越大。单击「资源库」，在原位看到更多内容。&#x27;,run:()=&gt;{setFilter(&#x27;&#x27;);navigate(&#x27;home&#x27;);select(&#x27;library&#x27;,false)}},{text:&#x27;&lt;b&gt;02 进入目录。&lt;/b&gt; 已进入 Developer；选中 DerivedData，右侧会解释用途与处理影响。&#x27;,run:()=&gt;{navigate(&#x27;developer&#x27;);select(&#x27;derived&#x27;,false)}},{text:&#x27;&lt;b&gt;03 先看依据。&lt;/b&gt; 展开判断依据，或问“处理后会怎样？”。确认后加入清单，不会立刻删除。&#x27;,run:()=&gt;{select(&#x27;derived&#x27;,false);$(&#x27;.sj-evidence&#x27;).open=true}},{text:&#x27;&lt;b&gt;04 预览处理。&lt;/b&gt; 打开左侧清单，可以模拟移入废纸篓并撤销；可用空间不会因此增加。&#x27;,run:()=&gt;{addQueue(&#x27;derived&#x27;);showQueue()}}];
+    function tourStep(step){if(step&gt;=tours.length){state.tour=-1;$(&#x27;#sj-tour&#x27;).hidden=true;return}closeModal();state.tour=step;$(&#x27;#sj-tour&#x27;).hidden=false;$(&#x27;#sj-tour-number&#x27;).textContent=(step+1)+&#x27; / 4&#x27;;$(&#x27;#sj-tour-text&#x27;).innerHTML=tours[step].text;$(&#x27;[data-action=&quot;tour-next&quot;]&#x27;).textContent=step===3?&#x27;结束引导&#x27;:&#x27;下一步&#x27;;tours[step].run()}
+    function setTag(key){state.tags[state.selected]=key;render();persist();toast(&#x27;已标记为「&#x27;+tagNames[key]+&#x27;」。标记不代表 AI 验证结果。&#x27;)}
+    const actions={&#x27;apply-filter&#x27;:()=&gt;setFilter($(&#x27;#sj-filter&#x27;).value.trim()),guide,tour:()=&gt;tourStep(0),&#x27;tour-next&#x27;:()=&gt;tourStep(state.tour+1),&#x27;tour-close&#x27;:()=&gt;{state.tour=-1;$(&#x27;#sj-tour&#x27;).hidden=true},map:()=&gt;{closeModal();navigate(&#x27;home&#x27;)},suggestions:showSuggestions,queue:showQueue,location:showLocation,&#x27;close-dialog&#x27;:closeModal,&#x27;clear-filter&#x27;:()=&gt;setFilter(&#x27;&#x27;),back:()=&gt;{if(state.historyIndex&gt;0)navigate(state.history[--state.historyIndex],false)},forward:()=&gt;{if(state.historyIndex&lt;state.history.length-1)navigate(state.history[++state.historyIndex],false)},up:()=&gt;{const n=nodes.get(state.focus);if(n.parent)navigate(n.parent.id)},&#x27;more-detail&#x27;:()=&gt;{state.detail=Math.min(4,state.detail+1);render();persist()},&#x27;less-detail&#x27;:()=&gt;{state.detail=Math.max(1,state.detail-1);state.expanded.clear();render();persist()},&#x27;enter-selected&#x27;:()=&gt;navigate(state.selected),&#x27;add-queue&#x27;:()=&gt;addQueue(),&#x27;clear-tag&#x27;:()=&gt;{delete state.tags[state.selected];render();persist()},&#x27;mark-keep&#x27;:()=&gt;setTag(&#x27;red&#x27;),&#x27;ask-impact&#x27;:()=&gt;{state.followup=copyFor(nodes.get(state.selected)).impact;renderInspector()},&#x27;ask-recover&#x27;:()=&gt;{state.followup=&#x27;原型里的模拟操作可撤销。真实移入废纸篓的文件通常可在清空前放回；清空后不能承诺恢复。缓存“重新生成”也不等于还原原文件。&#x27;;renderInspector()},finder:()=&gt;modal(&#x27;Finder 定位 · 演示&#x27;,`&lt;div class=&quot;sj-intro-box&quot;&gt;原生版会在 Finder 中选中该项目。浏览器原型仅展示目标路径，不会打开你的真实文件。&lt;/div&gt;&lt;p&gt;&lt;code&gt;${esc(nodes.get(state.selected).path)}&lt;/code&gt;&lt;/p&gt;`),preview:()=&gt;modal(&#x27;文件预览 · 演示&#x27;,`&lt;div class=&quot;sj-intro-box&quot;&gt;${esc(nodes.get(state.selected).name)}&lt;/div&gt;&lt;p&gt;大小：${fmt(fullSize(nodes.get(state.selected)))} GB&lt;/p&gt;&lt;p&gt;本原型没有真实文件内容。原生版计划使用系统 Quick Look 进行预览。&lt;/p&gt;`),rescan:startScan,&#x27;pause-scan&#x27;:()=&gt;{state.paused=!state.paused;renderScan()},&#x27;stop-scan&#x27;:()=&gt;{clearInterval(scanTimer);state.scanning=false;render()},&#x27;simulate-trash&#x27;:simulateTrash,undo};
+    root.addEventListener(&#x27;click&#x27;,e=&gt;{const hit=e.target.closest(&#x27;[data-node-action]&#x27;);if(hit){if(e.detail===0){select(hit.dataset.nodeAction);return}clearTimeout(clickTimer);clickTimer=setTimeout(()=&gt;select(hit.dataset.nodeAction),230);return}const act=e.target.closest(&#x27;[data-action]&#x27;);if(act){const fn=actions[act.dataset.action];if(fn)fn();$(&#x27;#sj-context&#x27;).hidden=true;return}const loc=e.target.closest(&#x27;[data-location]&#x27;);if(loc){navigate(loc.dataset.location);return}const filter=e.target.closest(&#x27;[data-filter]&#x27;);if(filter){setFilter(filter.dataset.filter);return}const tag=e.target.closest(&#x27;[data-tag]&#x27;);if(tag){setTag(tag.dataset.tag);return}const inspect=e.target.closest(&#x27;[data-inspect]&#x27;);if(inspect){const n=nodes.get(inspect.dataset.inspect);closeModal();setFilter(&#x27;&#x27;);navigate(n.parent.id);select(n.id,false);$(&#x27;.sj-evidence&#x27;).open=true;return}const pick=e.target.closest(&#x27;[data-pick-location]&#x27;);if(pick){closeModal();setFilter(&#x27;&#x27;);navigate(pick.dataset.pickLocation);return}const rm=e.target.closest(&#x27;[data-remove-queue]&#x27;);if(rm){state.queue.delete(rm.dataset.removeQueue);render();persist();showQueue();return}$(&#x27;#sj-context&#x27;).hidden=true});
+    root.addEventListener(&#x27;dblclick&#x27;,e=&gt;{const hit=e.target.closest(&#x27;[data-node-action]&#x27;);if(!hit)return;clearTimeout(clickTimer);const n=nodes.get(hit.dataset.nodeAction);if(n.children)navigate(n.id);else{select(n.id,false);actions.preview()}});
+    root.addEventListener(&#x27;pointerover&#x27;,e=&gt;{const hit=e.target.closest(&#x27;[data-node-action]&#x27;);if(hit){const n=nodes.get(hit.dataset.nodeAction);$(&#x27;#sj-hoverpath&#x27;).textContent=n.path+&#x27; · &#x27;+fmt(fullSize(n))+&#x27; GB&#x27;}});
+    root.addEventListener(&#x27;contextmenu&#x27;,e=&gt;{const hit=e.target.closest(&#x27;[data-node-action]&#x27;);if(!hit)return;e.preventDefault();clearTimeout(clickTimer);select(hit.dataset.nodeAction,false);const n=nodes.get(state.selected),menu=$(&#x27;#sj-context&#x27;);menu.innerHTML=`${n.children?&#x27;&lt;button data-action=&quot;enter-selected&quot;&gt;进入目录&lt;/button&gt;&#x27;:&#x27;&lt;button data-action=&quot;preview&quot;&gt;预览 · 模拟&lt;/button&gt;&#x27;}&lt;button data-action=&quot;finder&quot;&gt;在 Finder 中显示 · 模拟&lt;/button&gt;&lt;button data-action=&quot;mark-keep&quot;&gt;标记为保留&lt;/button&gt;${copyFor(n).safe?&#x27;&lt;button data-action=&quot;add-queue&quot;&gt;加入清理清单&lt;/button&gt;&#x27;:&#x27;&#x27;}`;const box=root.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(e.clientX-box.left,box.width-200))+&#x27;px&#x27;;menu.style.top=Math.max(8,Math.min(e.clientY-box.top,box.height-185))+&#x27;px&#x27;;menu.hidden=false});
+    $(&#x27;#sj-filter&#x27;).addEventListener(&#x27;keydown&#x27;,e=&gt;{if(e.key===&#x27;Enter&#x27;){e.preventDefault();setFilter($(&#x27;#sj-filter&#x27;).value.trim())}});
+    root.addEventListener(&#x27;keydown&#x27;,e=&gt;{if(e.key===&#x27;Escape&#x27;){$(&#x27;#sj-context&#x27;).hidden=true;return}if((e.metaKey||e.ctrlKey)&amp;&amp;e.key===&#x27;f&#x27;){e.preventDefault();$(&#x27;#sj-filter&#x27;).focus();return}if(e.target.matches(&#x27;input,textarea&#x27;))return;if((e.metaKey||e.ctrlKey)&amp;&amp;e.key===&#x27;ArrowUp&#x27;){e.preventDefault();actions.up()}if((e.metaKey||e.ctrlKey)&amp;&amp;[&#x27;1&#x27;,&#x27;2&#x27;,&#x27;3&#x27;,&#x27;4&#x27;].includes(e.key)){e.preventDefault();setTag([&#x27;red&#x27;,&#x27;yellow&#x27;,&#x27;green&#x27;,&#x27;blue&#x27;][Number(e.key)-1])}});
+    $(&#x27;#sj-dialog&#x27;).addEventListener(&#x27;click&#x27;,e=&gt;{if(e.target===$(&#x27;#sj-dialog&#x27;)){const r=e.target.getBoundingClientRect();if(e.clientX&lt;r.left||e.clientX&gt;r.right||e.clientY&lt;r.top||e.clientY&gt;r.bottom)closeModal()}});
+    new ResizeObserver(()=&gt;{cancelAnimationFrame(mapRAF);mapRAF=requestAnimationFrame(drawMap)}).observe($(&#x27;#sj-treemap&#x27;));
+    restore(window.openai?.widgetState);render();
+    window.addEventListener(&#x27;openai:set_globals&#x27;,e=&gt;{const saved=e.detail?.globals?.widgetState;if(saved){restore(saved);render()}});
+    if(globalThis.Tweak){const tweak=new globalThis.Tweak({container:root,onChange:()=&gt;{root.style.setProperty(&#x27;--sj-radius&#x27;,visual.radius+&#x27;px&#x27;);drawMap()}});tweak.addSelect(visual,&#x27;palette&#x27;,{label:&#x27;空间图配色&#x27;,options:[&#x27;柔和分区&#x27;,&#x27;统一浅灰&#x27;]});tweak.addSlider(visual,&#x27;radius&#x27;,{label:&#x27;方块圆角&#x27;,min:2,max:12,unit:&#x27;px&#x27;})}
+  })();
+  &lt;/script&gt;
+&lt;/div&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+  let lastPointerWasTouch = false;
+  let pinnedByTouch = false;
+
+  const getTrigger = (event) =&gt; {
+    for (const target of event.composedPath()) {
+      if (target?.nodeType === Node.ELEMENT_NODE) {
+        const trigger = target.closest(&quot;[data-tooltip]&quot;);
+        if (trigger) return trigger;
+      }
+    }
+    return null;
+  };
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    pinnedByTouch = false;
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handlePointer = (event) =&gt; {
+    lastPointerWasTouch =
+      event.type === &quot;pointerdown&quot; &amp;&amp; event.pointerType === &quot;touch&quot;;
+  };
+  const handleTouchClick = (event) =&gt; {
+    const isTouch = event.pointerType === &quot;touch&quot; || lastPointerWasTouch;
+    lastPointerWasTouch = false;
+    if (!isTouch || event.detail === 0) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (
+      trigger == null ||
+      !trigger.isConnected ||
+      getContent(trigger).length === 0 ||
+      (pinnedByTouch &amp;&amp; activeTrigger === trigger)
+    ) {
+      if (pinnedByTouch) {
+        closeTooltip();
+      }
+      return;
+    }
+    openTooltip(trigger);
+    pinnedByTouch = activeTrigger === trigger;
+    window.setTimeout(() =&gt; {
+      if (activeTrigger === trigger &amp;&amp; !trigger.isConnected) {
+        closeTooltip(false);
+      }
+    }, 0);
+  };
+  const handleLeave = (event) =&gt; {
+    if (pinnedByTouch) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    lastPointerWasTouch = false;
+    const trigger = getTrigger(event);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handlers = {
+    pointerover: handlePointerOpen,
+    pointerdown: handlePointer,
+    pointercancel: handlePointer,
+    click: handleTouchClick,
+    pointerout: handleLeave,
+    focusin: handleFocusIn,
+    focusout: handleLeave,
+    keydown: handleKeyDown,
+    contextmenu: handleContextMenu,
+  };
+  const roots = new Map();
+  const handledEvents = new WeakSet();
+  const handleEvent = (event) =&gt; {
+    if (handledEvents.has(event)) return;
+    handledEvents.add(event);
+    handlers[event.type](event);
+  };
+  const discoverRoots = (node) =&gt; {
+    if (node.shadowRoot) listen(node.shadowRoot);
+    for (const element of node.querySelectorAll(&quot;*&quot;)) {
+      if (element.shadowRoot) listen(element.shadowRoot);
+    }
+  };
+  const listen = (root) =&gt; {
+    if (roots.has(root)) return;
+    for (const type of Object.keys(handlers)) root.addEventListener(type, handleEvent);
+    const observer = new window.MutationObserver((records) =&gt; {
+      for (const { addedNodes } of records) {
+        for (const node of addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) discoverRoots(node);
+        }
+      }
+      for (const [root, cleanup] of roots) {
+        if (root.host &amp;&amp; !root.host.isConnected) {
+          cleanup();
+          roots.delete(root);
+        }
+      }
+      if (activeTrigger &amp;&amp; !activeTrigger.isConnected) closeTooltip(false);
+    });
+    observer.observe(root, { childList: true, subtree: true });
+    roots.set(root, () =&gt; {
+      observer.disconnect();
+      for (const type of Object.keys(handlers)) root.removeEventListener(type, handleEvent);
+    });
+    discoverRoots(root);
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    lastPointerWasTouch = false;
+    for (const cleanup of roots.values()) cleanup();
+    roots.clear();
+    tooltip = null;
+  };
+
+  // Events between children of one shadow root never reach the document.
+  listen(document);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-tabs&quot;&gt;
+(() =&gt; {
+  const selector = &#x27;.nav[role=&quot;tablist&quot;] [role=&quot;tab&quot;]&#x27;;
+  const disabled = &#x27;:disabled,[aria-disabled=&quot;true&quot;]&#x27;;
+  const selectTab = (selected) =&gt; {
+    const panelId = selected.getAttribute(&quot;aria-controls&quot;);
+    for (const tab of selected.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;)) {
+      const active = tab === selected;
+      tab.classList.toggle(&quot;active&quot;, active);
+      tab.setAttribute(&quot;aria-selected&quot;, String(active));
+      const id = tab.getAttribute(&quot;aria-controls&quot;);
+      const panel = id &amp;&amp; document.getElementById(id);
+      if (panel != null) {
+        panel.hidden = id !== panelId;
+        if (!panel.hidden &amp;&amp; selected.id) {
+          panel.setAttribute(&quot;aria-labelledby&quot;, selected.id);
+        }
+      }
+    }
+  };
+  const interact = (event) =&gt; {
+    const tab = event.target?.closest?.(selector);
+    if (event.defaultPrevented || tab == null || tab.matches(disabled)) {
+      return;
+    }
+    if (event.type === &quot;click&quot;) {
+      selectTab(tab);
+      return;
+    }
+    const tabs = Array.from(
+      tab.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;),
+    ).filter((candidate) =&gt; !candidate.matches(disabled));
+    const current = tabs.indexOf(tab);
+    let next;
+    if (event.key === &quot;ArrowRight&quot; || event.key === &quot;ArrowDown&quot;) {
+      next = (current + 1) % tabs.length;
+    } else if (event.key === &quot;ArrowLeft&quot; || event.key === &quot;ArrowUp&quot;) {
+      next = (current + tabs.length - 1) % tabs.length;
+    } else if (event.key === &quot;Home&quot;) {
+      next = 0;
+    } else if (event.key === &quot;End&quot;) {
+      next = tabs.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    tabs[next].focus();
+    selectTab(tabs[next]);
+  };
+
+  for (const list of document.querySelectorAll(&#x27;.nav[role=&quot;tablist&quot;]&#x27;)) {
+    const selected =
+      list.querySelector(&#x27;[role=&quot;tab&quot;][aria-selected=&quot;true&quot;]&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;].active&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;]&#x27;);
+    if (selected != null) {
+      selectTab(selected);
+    }
+  }
+  document.addEventListener(&quot;click&quot;, interact);
+  document.addEventListener(&quot;keydown&quot;, interact);
+  window.addEventListener(&quot;pagehide&quot;, () =&gt; {
+    document.removeEventListener(&quot;click&quot;, interact);
+    document.removeEventListener(&quot;keydown&quot;, interact);
+  }, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+<script>(() => {
+  const frame = document.getElementById("codex-visualization");
+  if (!(frame instanceof HTMLIFrameElement)) {
+    return;
+  }
+  let viewportHeight = globalThis.innerHeight;
+  const storageKey = `codex:visualization-widget-state-v2:${JSON.stringify([
+    globalThis.location.pathname,
+    globalThis.location.search,
+  ])}`;
+  const parseState = (serializedState) => {
+    if (
+      typeof serializedState !== "string" ||
+      new TextEncoder().encode(serializedState).length > 16 * 1024
+    ) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    /** @type {unknown} */
+    const state = JSON.parse(serializedState);
+    if (
+      state == null ||
+      typeof state !== "object" ||
+      Array.isArray(state) ||
+      ("imageIds" in state &&
+        (!Array.isArray(state.imageIds) || state.imageIds.length > 0))
+    ) {
+      throw new TypeError("Widget state must be a JSON object");
+    }
+    const storedState = { modelContent: null, privateContent: null, ...state };
+    const canonicalState = JSON.stringify(
+      storedState,
+      (_key, /** @type {unknown} */ value) => {
+        if (typeof value === "number" && !Number.isFinite(value)) {
+          throw new TypeError("Widget state must contain finite numbers");
+        }
+        return value;
+      },
+    );
+    if (new TextEncoder().encode(canonicalState).length > 16 * 1024) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    return storedState;
+  };
+  let storage = null;
+  let state = null;
+  try {
+    const localStorage = globalThis.localStorage;
+    const probeKey = `${storageKey}:probe`;
+    localStorage.setItem(probeKey, "1");
+    localStorage.removeItem(probeKey);
+    storage = localStorage;
+    const savedState = storage.getItem(storageKey);
+    if (savedState != null) {
+      try {
+        state = parseState(savedState);
+      } catch {
+        // Invalid saved state does not disable future writes.
+      }
+    }
+  } catch {
+    storage = null;
+  }
+  const initialGlobals = {
+    widgetState: state,
+    statePersistence: storage == null ? "none" : "local",
+  };
+
+  const channel = new MessageChannel();
+  channel.port1.addEventListener("message", (event) => {
+    const data = event.data;
+    if (typeof data !== "object" || data == null) {
+      return;
+    }
+    if (data.type === "widget-state-write") {
+      if (!Number.isSafeInteger(data.id) || data.id <= 0) {
+        return;
+      }
+      let ok = false;
+      try {
+        if (storage != null) {
+          const state = parseState(data.state);
+          storage.setItem(storageKey, JSON.stringify(state));
+          ok = true;
+        }
+      } catch {
+        // Storage denial, quota limits, and invalid state return a failed receipt.
+      }
+      channel.port1.postMessage({
+        type: "widget-state-result",
+        id: data.id,
+        ok,
+      });
+      return;
+    }
+    if (data.type === "height") {
+      const height = data.height;
+      if (
+        typeof height === "number" &&
+        Number.isFinite(height) &&
+        height >= 0 &&
+        height <= 10_000
+      ) {
+        frame.style.height = Math.ceil(height) + "px";
+      }
+      return;
+    }
+    if (data.type === "scroll-to") {
+      const top = data.top;
+      if (
+        typeof top === "number" &&
+        Number.isFinite(top) &&
+        top >= 0 &&
+        globalThis.navigator.userActivation?.isActive === true
+      ) {
+        globalThis.scrollTo({
+          top: Math.ceil(
+            globalThis.scrollY + frame.getBoundingClientRect().top + top,
+          ),
+        });
+      }
+      return;
+    }
+    if (data.type === "open-external") {
+      const rawHref = data.href;
+      if (typeof rawHref !== "string") {
+        return;
+      }
+      let href;
+      try {
+        const url = new URL(rawHref, document.baseURI);
+        if (url.protocol !== "https:") {
+          return;
+        }
+        href = url.href;
+      } catch {
+        return;
+      }
+      if (globalThis.navigator.userActivation?.isActive === true) {
+        const anchor = document.createElement("a");
+        anchor.href = href;
+        anchor.rel = "noopener noreferrer";
+        anchor.target = "_blank";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      }
+      return;
+    }
+    if (data.type === "follow-up") {
+      const prompt = data.prompt;
+      if (
+        typeof prompt !== "string" ||
+        globalThis.navigator.userActivation?.isActive !== true
+      ) {
+        return;
+      }
+      const title = data.title;
+      globalThis.prompt(typeof title === "string" ? title : prompt, prompt);
+    }
+  });
+  channel.port1.start();
+  const srcdoc = frame.dataset.srcdoc;
+  if (srcdoc == null) {
+    return;
+  }
+  globalThis.addEventListener("resize", () => {
+    const height = Number.parseFloat(frame.style.height);
+    if (!Number.isFinite(height) || height <= viewportHeight) {
+      frame.style.removeProperty("height");
+    }
+    viewportHeight = globalThis.innerHeight;
+    channel.port1.postMessage({ type: "measure" });
+  });
+  frame.addEventListener(
+    "load",
+    () => {
+      frame.contentWindow?.postMessage(
+        { type: "codex-visualization-initialize" },
+        "*",
+        [channel.port2],
+      );
+    },
+    { once: true },
+  );
+  // Match the trusted bootstrap element, not the same text in an authored title.
+  frame.srcdoc = srcdoc.replace(
+    '<script type="application/json" id="codex-visualization-widget-state">__CODEX_VISUALIZATION_WIDGET_STATE__<\/script>',
+    () =>
+      '<script type="application/json" id="codex-visualization-widget-state">' +
+      JSON.stringify(initialGlobals).replaceAll("<", "\\u003c") +
+      "<\/script>",
+  );
+  delete frame.dataset.srcdoc;
+})();
+</script>
+</body>
+</html>

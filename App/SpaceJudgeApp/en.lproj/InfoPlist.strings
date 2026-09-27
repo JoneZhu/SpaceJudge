@@ -1,0 +1,6 @@
+/* SpaceJudge InfoPlist.strings (English fallback). */
+"NSDesktopFolderUsageDescription" = "SpaceJudge only reads the names and sizes of items in a folder you choose (such as Desktop) to draw a space map. It does not read regular file contents, never changes or deletes files, and does not upload data.";
+"NSDocumentsFolderUsageDescription" = "SpaceJudge only reads the names and sizes of items in a folder you choose (such as Documents) to draw a space map. It does not read document contents, never changes or deletes files, and does not upload data.";
+"NSDownloadsFolderUsageDescription" = "SpaceJudge only reads the names and sizes of items in a folder you choose (such as Downloads) to draw a space map. It does not read regular file contents, never changes or deletes files, and does not upload data.";
+"NSRemovableVolumesUsageDescription" = "SpaceJudge only reads the names and sizes of items on a removable volume you choose to draw a space map. It does not read regular file contents, never changes or deletes files, and does not upload data.";
+"NSNetworkVolumesUsageDescription" = "SpaceJudge only reads the names and sizes of items on a network volume you choose to draw a space map. It does not read regular file contents, never changes or deletes files, and does not upload data.";
