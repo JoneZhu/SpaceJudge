@@ -12,6 +12,16 @@
 
 > 当前版本：**v0.5.2，测试版，未经过 Apple 公证。**[直接下载 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.2/SpaceJudge-0.5.2-7-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg) · [版本说明与校验文件](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.2)。版本号不加测试后缀；测试状态通过发布说明、安装包标记和应用提示表达。
 
+## 一分钟视频上手
+
+![SpaceJudge 操作演示：选择范围、查看空间图、双击进入目录、准备 Codex 草稿、刷新占用](docs/assets/spacejudge-quickstart.gif)
+
+[下载完整视频（MP4，约 51 秒 / 0.8 MB）](https://github.com/JoneZhu/SpaceJudge/raw/refs/heads/main/docs/assets/spacejudge-quickstart.mp4) · [查看静态截图](docs/assets/spacejudge-quickstart-poster.png)
+
+真实的 v0.5.2 应用窗口录制，带中文字幕、无音频；上方动画展示相同流程。使用合成测试文件，操作等待时间已剪去，不作为扫描性能基准。刷新演示只是把测试文件移出扫描范围，**并未释放磁盘空间**。Codex 部分只展示未发送的草稿，不演示自动清理。
+
+演示分为五步：**选择范围 → 看占用 → 双击进入 → 右键准备建议 → `⌘R` 刷新**。首次安装的系统安全提示仍请按下方安装说明处理。
+
 ## 它能做什么？
 
 - **看清空间去向**：嵌套空间图中，方块越大，占用越大；颜色区分目录组，不代表是否可以删除。

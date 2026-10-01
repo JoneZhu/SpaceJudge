@@ -1,0 +1,106 @@
+{
+  "version": "0.5.2",
+  "durationSeconds": 51,
+  "audio": false,
+  "source": "Real single-window recordings; synthetic fixture; waiting time trimmed; not a benchmark",
+  "steps": [
+    {
+      "file": "raw-2.mp4",
+      "start": 1,
+      "duration": 6,
+      "number": "01",
+      "title": "选择扫描范围",
+      "lines": [
+        "启动页选择文件夹",
+        "或整个磁盘。",
+        "",
+        "首次体验建议先选",
+        "一个熟悉的小目录。"
+      ]
+    },
+    {
+      "file": "raw-2.mp4",
+      "start": 76,
+      "duration": 8,
+      "number": "02",
+      "title": "一眼看清占用",
+      "lines": [
+        "方块越大，占用越大。",
+        "扫描结果逐步出现。",
+        "",
+        "颜色只用于区分目录，",
+        "不表示能否删除。"
+      ]
+    },
+    {
+      "file": "navigation.mp4",
+      "start": 51,
+      "duration": 8,
+      "number": "03",
+      "title": "逐层找到大项",
+      "lines": [
+        "双击目录，进入查看。",
+        "单击可选中或展开。",
+        "",
+        "点面包屑、返回键，",
+        "回到上层继续浏览。"
+      ]
+    },
+    {
+      "file": "navigation.mp4",
+      "start": 70,
+      "duration": 5,
+      "number": "04",
+      "title": "需要清理建议？",
+      "lines": [
+        "对目录打开右键菜单，",
+        "选择“用 Codex 分析”。",
+        "",
+        "也可查看信息，或",
+        "在 Finder 中定位。"
+      ]
+    },
+    {
+      "file": "navigation.mp4",
+      "start": 97,
+      "duration": 7,
+      "number": "04",
+      "title": "先检查分析草稿",
+      "lines": [
+        "核对范围与上下文，",
+        "再打开 Codex 草稿。",
+        "",
+        "需另行安装 Codex；",
+        "不会自动发送或清理。"
+      ]
+    },
+    {
+      "file": "navigation.mp4",
+      "start": 161,
+      "duration": 12,
+      "number": "05",
+      "title": "刷新，继续分析",
+      "lines": [
+        "外部处理后按 Cmd+R，",
+        "更新整个原扫描范围。",
+        "",
+        "保留当前浏览位置，",
+        "比较目录占用变化。"
+      ]
+    },
+    {
+      "file": "navigation.mp4",
+      "start": 180,
+      "duration": 5,
+      "number": "END",
+      "title": "先看清，再决定",
+      "lines": [
+        "SpaceJudge 只读扫描，",
+        "不会替你删除文件。",
+        "",
+        "演示将测试文件移出",
+        "范围，并未释放磁盘。"
+      ]
+    }
+  ]
+}
