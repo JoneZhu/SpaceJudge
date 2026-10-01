@@ -10,7 +10,7 @@
 
 [下载与版本](https://github.com/JoneZhu/SpaceJudge/releases) · [使用说明](docs/38-native-mvp-quickstart.md) · [问题反馈](https://github.com/JoneZhu/SpaceJudge/issues) · [工程文档](docs/README.md)
 
-> 当前版本：**v0.5.2，测试版，未经过 Apple 公证。**本地安装包已构建并校验，尚未上传 GitHub Releases。版本号不加测试后缀；测试状态通过发布说明、安装包标记和应用提示表达。
+> 当前版本：**v0.5.2，测试版，未经过 Apple 公证。**[直接下载 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.2/SpaceJudge-0.5.2-7-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg) · [版本说明与校验文件](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.2)。版本号不加测试后缀；测试状态通过发布说明、安装包标记和应用提示表达。
 
 ## 它能做什么？
 
@@ -35,7 +35,9 @@ SpaceJudge 负责提供事实，用户和外部 Agent 决定如何处理。**软
 
 ### 安装测试版
 
-测试包上传后，可从 [GitHub Releases](https://github.com/JoneZhu/SpaceJudge/releases) 下载 DMG，打开后阅读包内说明，再把 `SpaceJudge.app` 拖入“应用程序”。更新前先退出旧版，建议保留旧应用副本。
+[下载 v0.5.2 测试版 DMG（约 6.5 MiB）](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.2/SpaceJudge-0.5.2-7-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg)。打开后阅读包内说明，再把 `SpaceJudge.app` 拖入“应用程序”。更新前先退出旧版，建议保留旧应用副本。
+
+[发布页的 Assets](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.2) 同时提供 SHA-256 校验文件、构建清单和测试说明。请选择 `.dmg` 安装包；`Source code` 压缩包是源码，不是应用。已从公开地址下载并核对安装包校验值；这不等于完成其他 Mac 的安装验收。
 
 当前测试包使用免费的本地签名，**不是 Developer ID 签名，也没有完成 Apple 公证**。首次打开可能被 macOS 拦截。仅在确认来源可信时，按 [Apple 的单应用批准说明](https://support.apple.com/102445) 在“系统设置 → 隐私与安全”中处理；受管理的电脑可能不允许安装。
 

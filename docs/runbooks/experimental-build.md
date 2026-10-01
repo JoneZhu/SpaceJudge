@@ -36,12 +36,16 @@ bash scripts/release/verify-artifact.sh --mode experimental \
 
 最低 macOS 14；App/CLI 包含 Apple Silicon、Intel 两种架构，但 Intel 和干净电脑安装尚未实机验收。外部 Codex 功能需要用户自己安装桌面 Codex。草稿内容与外部 Agent 权限仍由用户确认；不自动清理。
 
-## 上传约定（须单独确认发布）
+## 上传约定
 
-按用户选择，版本 tag 使用 `v0.5.2`，不加 `test.1`；版本号、测试状态和公证状态是不同概念。后续授权 GitHub Release 发布时，仍标记 **Pre-release**，并绑定构建清单中的精确 commit；标题和说明首行写“v0.5.2 · 测试版 / 未公证”。仅上传 DMG、`.sha256`、清单和同版测试说明，不上传 `logs/`、扫描数据库、个人路径、备份或整个 output 文件夹。不创建正式稳定版/latest 宣传。
+按用户选择，版本 tag 使用 `v0.5.2`，不加 `test.1`；版本号、测试状态和公证状态是不同概念。每次发布须获得明确授权，仍标记 **Pre-release**，并绑定构建清单中的精确 commit；标题和说明首行写“v0.5.2 · 测试版 / 未公证”。仅上传 DMG、`.sha256`、清单和同版测试说明，不上传 `logs/`、扫描数据库、个人路径、备份或整个 output 文件夹。不创建正式稳定版/latest 宣传。
 
 本地输出目录中的 `test1` 只是构建工作目录名，不是对外版本号，也不影响应用本身的 0.5.2。重建时不要覆盖已分享的同版本资产或移动已发布的 tag；如有代码变更，应使用新的版本。
 
-本轮只准备本地包，不上传 GitHub Release、不改变仓库可见性、不安装替换当前应用。若有测试反馈，只提交系统版本、芯片、复现步骤和合成示例；截图/日志须先脱敏。
+2026-10-01 经用户明确授权，已发布 [v0.5.2 测试版](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.2)。tag 和安装包均对应 `310a694e1233e5406adf81374e476afe33c4ab5f`；README 等后续文档维护在 main，不移动 tag。先上传草稿，再下载四个附件逐项比对 SHA-256，之后公开为 Pre-release、`latest=false`；另从无认证公开地址下载 DMG，校验值与本地包一致。详细说明保存于[版本记录](../releases/v0.5.2.md)。这次发布不替换本机已安装应用。
+
+代码 SSH 推送权限不等于 Release API 上传权限。发布通过用户在 GitHub 网页批准的 GitHub CLI 授权完成，凭据存于系统 keyring，不写入仓库；本地发布工具与独立配置放在被忽略的 `output/release-tools/`。后续发布仍需检查授权账号和仓库权限，不在聊天、日志或提交中输出 Token。
+
+若有测试反馈，只提交系统版本、芯片、复现步骤和合成示例；截图/日志须先脱敏。
 
 正式对外推广时仍需要 Developer ID + 公证，以及真实下载来源下的 Gatekeeper、Intel/Apple Silicon 安装验收，见[正式发布流程](direct-release.md)。
