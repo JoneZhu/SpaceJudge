@@ -232,6 +232,27 @@ public struct TreemapSceneData: Sendable, Equatable {
         return expandedPages[parentID]
     }
 
+    /// The selected directory's own aggregate when its page is loaded in this
+    /// scene, else `nil`. A loaded page carries the directory's
+    /// `DirectoryAggregateRecord` in `aggregate`, so a scene update can refresh
+    /// the selection without an extra store read.
+    public func knownAggregate(for nodeID: NodeID) -> DirectoryAggregateRecord? {
+        page(for: nodeID)?.aggregate
+    }
+
+    /// The page that directly contains `nodeID` as a child, or `nil` when it is
+    /// not in this scene. Its `aggregate` is the containing parent's aggregate,
+    /// so a complete parent proves every descendant's size is final.
+    public func containingPage(for nodeID: NodeID) -> TreemapScenePage? {
+        if focusPage.items.contains(where: { $0.nodeID == nodeID }) {
+            return focusPage
+        }
+        for page in expandedPages.values where page.items.contains(where: { $0.nodeID == nodeID }) {
+            return page
+        }
+        return nil
+    }
+
     /// Scene-wide count of omitted children whose weight cannot be derived.
     /// These are never turned into area; the UI surfaces them as a compact
     /// "still counting" message. Uses saturating addition.

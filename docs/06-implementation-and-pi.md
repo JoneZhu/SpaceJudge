@@ -159,3 +159,5 @@ Codex 与 Pi 不同时修改同一产品文件。原始 Pi 会话和日志保存
 ## 6. 当前阶段入口
 
 Phase 0–5D-A 已完成并经 Codex 独立验收，首个干净 Git 基线已经建立。Phase 5D 已确定采用 Developer ID + 公证 DMG 直接分发，并拆成 5D-A“发布工程就绪”和 5D-B“真实分发验证”。5D-A 已冻结 Release Hardened Runtime、AppIcon、本地化 usage description、credential-independent 本地 DMG、fail-closed 发布脚本与 runbook；在 Developer ID Application、Keychain notary profile 和用户真实发布指令都具备前，不执行正式签名、公证或发布，也不得顺带加入删除、清理建议、AI 或网络能力。
+
+Phase 6 已完成：6A（Swift agent CLI）与 6B（TypeScript stdio MCP 适配器）由 Pi 实现、自测并按四轮审查修复，Codex 随后在 Swift 6.3.3 与最低 Node 20.16.0 上独立完成协议互操作、隐私、取消、资源清理、性能和全量回归验收。首次真实整机使用随后暴露多 worker 满缓冲下的 event revision 乱序；Pi 按 [可靠性修复设计](27-phase-6-scale-reliability-fix.md) 实施，Codex 已在 676 万节点主目录和 840 万节点 `/` 上独立验收，证据见 [修复验收基线](28-phase-6-scale-fix-baseline.md)。当前超大扫描内存优化仍开放；未修改任何全局 MCP 配置，也未扩大为删除、AI、文件内容读取或网络能力。

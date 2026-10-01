@@ -430,10 +430,21 @@ sj_macho_paths() {
 sj_check_macho_inventory() {
     local app="$1" executable="$2"
     local allowed="Contents/MacOS/$executable"
+    local helper="Contents/Helpers/spacejudge-agent-cli"
     local found unexpected=""
     while IFS= read -r found; do
         [ -n "$found" ] || continue
-        [ "$found" = "$allowed" ] || unexpected="${unexpected}${found}"$'\n'
+        if [ "$found" = "$helper" ]; then
+            # Fixed signing plan: native helper must already be signed, with
+            # both supported architectures and no exception entitlement.
+            sj_require_strict_verify "$app/$helper"
+            sj_require_runtime_flag "$app/$helper"
+            sj_require_no_entitlements "$app/$helper"
+            [ "$(sj_lipo -archs "$app/$helper" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ' | sed -E 's/ *$//')" = "arm64 x86_64" ] \
+                || sj_die "CLI helper must be universal arm64 x86_64"
+        elif [ "$found" != "$allowed" ]; then
+            unexpected="${unexpected}${found}"$'\n'
+        fi
     done < <(sj_macho_paths "$app")
     if [ -n "$unexpected" ]; then
         sj_warn "unexpected nested Mach-O code in bundle:"

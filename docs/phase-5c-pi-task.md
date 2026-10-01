@@ -2,7 +2,7 @@
 
 目标：完整实现 [Phase 5C 设计](20-phase-5c-design.md) 和 [ADR-0009](adr/0009-session-snapshot-cache.md)，使快照缓存不会扫描自身、不会跨扫描/启动无界增长，并在低磁盘空间时安全停止。
 
-工作位置：`/Users/hongdazhu/Documents/ChatGPT/SpaceJudge`，当前 checkout 与工作树。仓库当前大量文件尚未提交，全部视为用户成果。
+工作位置：`/Users/example/Documents/ChatGPT/SpaceJudge`，当前 checkout 与工作树。仓库当前大量文件尚未提交，全部视为用户成果。
 
 分工：Pi 负责产品代码、测试、必要文档同步、自测和普通修复；Codex 负责既定设计、独立审查和验收。不要 commit、push、签名、公证、发布或更改 Pi/Codex 全局配置。
 

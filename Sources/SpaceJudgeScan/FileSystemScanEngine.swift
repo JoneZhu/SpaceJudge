@@ -23,6 +23,11 @@ final class CoordinatorRegistry: @unchecked Sendable {
     private var coordinators: [ScanID: ScanCoordinator] = [:]
     private var diagnostics: [ScanID: ScanDiagnostics] = [:]
     private var diagnosticsOrder: [ScanID] = []
+    /// At most one latest cancelled directory checkpoint. A cancelled scan
+    /// stores it before publishing its terminal; the runner takes it once
+    /// before persisting `cancelled`. Completed/failed scans never store one,
+    /// and a new scan clears any leftover so it cannot grow across scans.
+    private var cancelledCheckpoint: (scanID: ScanID, checkpoint: CancelledDirectoryCheckpoint)?
 
     /// Returns `false` when a coordinator for `scanID` already exists.
     func insert(_ coordinator: ScanCoordinator, for scanID: ScanID) -> Bool {
@@ -75,6 +80,40 @@ final class CoordinatorRegistry: @unchecked Sendable {
         defer { lock.unlock() }
         return diagnostics.count
     }
+
+    // MARK: Cancelled directory checkpoint (bounded, one slot)
+
+    func storeCancelledCheckpoint(
+        _ checkpoint: CancelledDirectoryCheckpoint,
+        for scanID: ScanID
+    ) {
+        lock.lock()
+        cancelledCheckpoint = (scanID, checkpoint)
+        lock.unlock()
+    }
+
+    func takeCancelledCheckpoint(for scanID: ScanID) -> CancelledDirectoryCheckpoint? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let value = cancelledCheckpoint, value.scanID == scanID else { return nil }
+        cancelledCheckpoint = nil
+        return value.checkpoint
+    }
+
+    /// Clears any checkpoint at the start of a new scan so a scan that finished
+    /// without a runner taking it cannot leave an unbounded slot behind.
+    func clearCancelledCheckpoint() {
+        lock.lock()
+        cancelledCheckpoint = nil
+        lock.unlock()
+    }
+
+    /// Test hook: whether a checkpoint is currently retained.
+    var hasCancelledCheckpoint: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return cancelledCheckpoint != nil
+    }
 }
 
 /// Real file-system `ScanEngine`.
@@ -104,10 +143,13 @@ public actor FileSystemScanEngine: ScanEngine {
         let (stream, continuation) = AsyncThrowingStream<ScanEvent, any Error>.makeStream(
             bufferingPolicy: .bufferingOldest(configuration.eventBufferSize)
         )
+        // A new scan can never reuse a previous cancelled checkpoint.
+        registry.clearCancelledCheckpoint()
         let coordinator = ScanCoordinator(
             scanID: scanID,
             request: request,
-            configuration: configuration
+            configuration: configuration,
+            registry: registry
         )
         guard registry.insert(coordinator, for: scanID) else {
             continuation.finish(throwing: ScanError.duplicateScan(scanID))
@@ -146,6 +188,21 @@ public actor FileSystemScanEngine: ScanEngine {
         if let coordinator = registry.coordinator(for: scanID) {
             await coordinator.cancel()
         }
+    }
+
+    /// Test hook: whether a cancelled checkpoint is currently retained.
+    nonisolated func debugHasCancelledCheckpoint() -> Bool {
+        registry.hasCancelledCheckpoint
+    }
+}
+
+/// The engine opts into the package-only cancelled-checkpoint side channel. A
+/// cancelled scan leaves at most one directory checkpoint for the runner to
+/// persist before the `cancelled` terminal; completed and failed scans leave
+/// none. Engines that do not implement this keep the previous behaviour.
+extension FileSystemScanEngine: CancelledCheckpointProviding {
+    package func takeCancelledCheckpoint(scanID: ScanID) async -> CancelledDirectoryCheckpoint? {
+        registry.takeCancelledCheckpoint(for: scanID)
     }
 }
 
@@ -320,6 +377,8 @@ actor ScanCoordinator {
     private let request: ScanRequest
     private let configuration: ScanConfiguration
     private let exclusions: SnapshotWorkspaceExclusionSet
+    /// Shared, bounded slot for the cancelled directory checkpoint.
+    private nonisolated let registry: CoordinatorRegistry
     let cancellation = ScanCancellationToken()
 
     private var continuation: Continuation?
@@ -339,8 +398,8 @@ actor ScanCoordinator {
 
     /// In-memory directory frontier. Its size never exceeds
     /// `configuration.maximumQueuedDirectories`; overflow goes to `spool`.
-    private var queue: [DirectoryWorkItem] = []
-    private var queueHead = 0
+    /// The ring releases each consumed item's storage slot immediately.
+    private var queue: DirectoryWorkQueue
     private var spool: DirectorySpool?
     private(set) var queueHighWater = 0
     private(set) var spoolWasUsed = false
@@ -354,7 +413,16 @@ actor ScanCoordinator {
     private var pendingNames: [NameRecord] = []
     private var pendingNodes: [NodeRecord] = []
     private var pendingAggregates: [DirectoryAggregateRecord] = []
+    private var lastProgressivePublication: Date = .distantPast
+    private var publishedProgressiveDescendant = false
+    private var bestKnownLiveAttributedBytes: UInt64 = 0
     private var pendingDirectoryNodes: [NodeID: DiscoveredDirectory] = [:]
+    /// Directory identities and names from a flush batch that a cancel
+    /// suppressed before it reached the consumer. They are cleared with the
+    /// rest of the buffers, but retained long enough to build the cancelled
+    /// checkpoint.
+    private var suppressedNames: [NameRecord] = []
+    private var suppressedDirectories: [NodeRecord] = []
     private var pendingChildren: [NodeID: UInt64] = [:]
     private var selfComplete: Set<NodeID> = []
     private var completionInfo: [NodeID: CompletionInfo] = [:]
@@ -369,11 +437,31 @@ actor ScanCoordinator {
     private var terminalEmitted = false
     private var scanFailure: Error?
 
-    init(scanID: ScanID, request: ScanRequest, configuration: ScanConfiguration) {
+    /// Single-writer FIFO gate for every `ScanEvent` delivery.
+    ///
+    /// `emit` can suspend when the bounded stream buffer is full, which makes
+    /// the actor reentrant. Without a gate a later `emit` from another worker
+    /// could reach `continuation.yield` first and publish a higher revision
+    /// before the blocked one. Ownership is handed directly to the queue head
+    /// on release so there is never a free window in which a new caller can
+    /// overtake an already-waiting delivery.
+    private var emitOwnershipHeld = false
+    private var emitWaiters: [CheckedContinuation<Void, Never>] = []
+
+    init(
+        scanID: ScanID,
+        request: ScanRequest,
+        configuration: ScanConfiguration,
+        registry: CoordinatorRegistry = CoordinatorRegistry()
+    ) {
         self.scanID = scanID
         self.request = request
         self.configuration = configuration
         self.exclusions = SnapshotWorkspaceExclusionSet(request.workspaceExclusions)
+        self.registry = registry
+        self.queue = DirectoryWorkQueue(
+            capacityLimit: configuration.maximumQueuedDirectories
+        )
     }
 
     // MARK: Lifecycle
@@ -504,7 +592,10 @@ actor ScanCoordinator {
         }
 
         if cancelled {
-            // A public cancel means no further normal facts are published.
+            // A public cancel means no further normal facts are published. The
+            // checkpoint preserves only the directory identities needed to
+            // reach already-committed leaves.
+            publishCancelledCheckpoint()
             discardPendingBuffers()
             let summary = try buildSummary(status: .cancelled)
             // Lock the terminal decision before any await so a concurrent
@@ -523,6 +614,7 @@ actor ScanCoordinator {
         if cancelled {
             // A cancel arrived while the final normal batches were being
             // delivered; only the cancelled terminal may follow.
+            publishCancelledCheckpoint()
             discardPendingBuffers()
             let summary = try buildSummary(status: .cancelled)
             terminalEmitted = true
@@ -575,6 +667,55 @@ actor ScanCoordinator {
         pendingChildren.removeAll(keepingCapacity: false)
         selfComplete.removeAll(keepingCapacity: false)
         completionInfo.removeAll(keepingCapacity: false)
+        suppressedNames.removeAll(keepingCapacity: false)
+        suppressedDirectories.removeAll(keepingCapacity: false)
+    }
+
+    /// Builds the cancelled directory checkpoint from the directories and names
+    /// that were discovered but not yet published, plus any directory from a
+    /// flush batch this cancel suppressed. It carries no aggregate, so a
+    /// cancelled directory's weight stays unknown rather than fabricated.
+    ///
+    /// Called only on the cancel branches, before `discardPendingBuffers()`.
+    private func publishCancelledCheckpoint() {
+        let checkpoint = makeCancelledCheckpoint()
+        guard !checkpoint.isEmpty else { return }
+        registry.storeCancelledCheckpoint(checkpoint, for: scanID)
+    }
+
+    private func makeCancelledCheckpoint() -> CancelledDirectoryCheckpoint {
+        var directories: [NodeRecord] = []
+        var neededNames = Set<NameID>()
+        directories.reserveCapacity(pendingDirectoryNodes.count + pendingNodes.count)
+
+        // Directories whose own enumeration never finished.
+        for discovered in pendingDirectoryNodes.values {
+            directories.append(discovered.makeRecord(scanID: scanID, extraFlags: []))
+            neededNames.insert(discovered.name)
+        }
+        // Directories that finished (or failed) but were not flushed, including
+        // the ones from a suppressed in-flight flush.
+        for node in pendingNodes where node.kind.isDirectoryLike {
+            directories.append(node)
+            neededNames.insert(node.name)
+        }
+        directories.append(contentsOf: suppressedDirectories)
+        for node in suppressedDirectories {
+            neededNames.insert(node.name)
+        }
+
+        // Only names that are still unpublished and referenced by an included
+        // directory. Published names already exist in SQLite and must not be
+        // re-inserted.
+        var seen = Set<NameID>()
+        var names: [NameRecord] = []
+        for record in pendingNames where neededNames.contains(record.id) {
+            if seen.insert(record.id).inserted { names.append(record) }
+        }
+        for record in suppressedNames where neededNames.contains(record.id) {
+            if seen.insert(record.id).inserted { names.append(record) }
+        }
+        return CancelledDirectoryCheckpoint(names: names, directories: directories)
     }
 
     // MARK: Worker coordination
@@ -610,8 +751,7 @@ actor ScanCoordinator {
             }
             try refill()
             if activeQueuedCount > 0 {
-                let item = queue[queueHead]
-                queueHead += 1
+                guard let item = queue.pop() else { continue }
                 inFlight += 1
                 return item
             }
@@ -944,6 +1084,19 @@ actor ScanCoordinator {
             failureFlag: failureFlag
         )
         selfComplete.insert(nodeID)
+        // Publish this directory's own immutable identity as soon as its own
+        // enumeration has finished or failed: the name, kind and flags are
+        // final here, and waiting for the whole subtree aggregate is what kept
+        // an early-discovered directory invisible in its parent's bounded page
+        // for the entire scan. The aggregate is still produced later by
+        // `tryCompleteUpward`, so no area, weight or reclaimable amount is
+        // fabricated. Each NodeID is emitted exactly once because the record is
+        // removed from `pendingDirectoryNodes` here.
+        if let discovered = pendingDirectoryNodes.removeValue(forKey: nodeID) {
+            pendingNodes.append(
+                discovered.makeRecord(scanID: scanID, extraFlags: failureFlag ?? [])
+            )
+        }
         try await tryCompleteUpward(from: nodeID)
     }
 
@@ -960,14 +1113,9 @@ actor ScanCoordinator {
                 extraInaccessible: 0,
                 failureFlag: nil
             )
-            if let discovered = pendingDirectoryNodes.removeValue(forKey: nodeID) {
-                pendingNodes.append(
-                    discovered.makeRecord(
-                        scanID: scanID,
-                        extraFlags: info.failureFlag ?? []
-                    )
-                )
-            }
+            // The directory's own `NodeRecord` was already published by
+            // `markSelfComplete`; this walk only produces the final aggregate
+            // and retires the per-directory working state.
             let aggregate = try aggregator.complete(
                 nodeID,
                 isComplete: info.isComplete,
@@ -979,6 +1127,18 @@ actor ScanCoordinator {
             if let parent, let remaining = pendingChildren[parent], remaining > 0 {
                 pendingChildren[parent] = remaining - 1
             }
+            // The directory's final aggregate is now an independent value and
+            // has been folded into its parent, so its mutable working state is
+            // no longer needed. The parent reference was captured above.
+            // The root is never retired: progress and the terminal summary read
+            // its live best-known totals. The aggregator keeps a lightweight
+            // `completed` set as the duplicate-completion guard.
+            if nodeID != rootNodeID {
+                completionInfo.removeValue(forKey: nodeID)
+                pendingChildren.removeValue(forKey: nodeID)
+                selfComplete.remove(nodeID)
+                aggregator.retire(nodeID)
+            }
             current = parent
         }
     }
@@ -989,7 +1149,7 @@ actor ScanCoordinator {
         if activeQueuedCount >= configuration.maximumQueuedDirectories {
             try spoolItem(item)
         } else {
-            queue.append(item)
+            queue.push(item)
             queueHighWater = max(queueHighWater, activeQueuedCount)
         }
         wakeWaiters()
@@ -1007,27 +1167,19 @@ actor ScanCoordinator {
     }
 
     private var activeQueuedCount: Int {
-        queue.count - queueHead
+        queue.count
     }
 
     private func refill() throws {
-        if queueHead > 0, queueHead == queue.count {
-            queue.removeAll(keepingCapacity: true)
-            queueHead = 0
-        }
         while activeQueuedCount < configuration.maximumQueuedDirectories {
             guard let spool, let item = try spool.pop() else { break }
-            queue.append(item)
+            queue.push(item)
             queueHighWater = max(queueHighWater, activeQueuedCount)
         }
     }
 
     private func releaseQueuedDescriptors() {
-        for index in queueHead..<queue.count {
-            queue[index].preopened?.close()
-        }
-        queue.removeAll(keepingCapacity: false)
-        queueHead = 0
+        queue.closeAll()
     }
 
     private func wakeWaiters() {
@@ -1056,6 +1208,7 @@ actor ScanCoordinator {
         guard !pendingNodes.isEmpty || !pendingAggregates.isEmpty || !pendingNames.isEmpty else {
             return
         }
+        try appendProgressiveAggregates()
         revision = try Self.nextRevision(from: revision)
         let batch = NodeBatch(
             scanID: scanID,
@@ -1068,15 +1221,64 @@ actor ScanCoordinator {
         pendingNodes.removeAll(keepingCapacity: true)
         pendingAggregates.removeAll(keepingCapacity: true)
         lastFlush = Date()
-        await emit(.batch(batch))
+        let delivered = await emit(.batch(batch))
+        if !delivered {
+            // A cancel (or a terminated stream) suppressed this batch before
+            // the consumer could persist it. Retain its directory identities
+            // and names so the cancelled checkpoint can reconnect any already
+            // committed descendant whose parent was in this batch.
+            suppressedNames.append(contentsOf: batch.names)
+            suppressedDirectories.append(contentsOf: batch.nodes.filter { $0.kind.isDirectoryLike })
+        } else if let rootAggregate = batch.directoryAggregates.first(where: { $0.nodeID == rootNodeID }) {
+            // Remember only emitted facts. A cancelled/suppressed batch must
+            // not advance the retained live total or terminal cancel summary.
+            bestKnownLiveAttributedBytes = rootAggregate.attributedBytes
+        }
         try await emitProgress()
+    }
+
+    /// Only enumerated directories have published node identities. Publishing
+    /// earlier would violate the store's node foreign key. An unfinished
+    /// subtree can still contribute to its already-published ancestors.
+    private func appendProgressiveAggregates() throws {
+        let limit = configuration.progressiveDirectoryLimit
+        let firstVisibleDirectory = !publishedProgressiveDescendant
+            && pendingNodes.contains { $0.kind.isDirectoryLike && $0.id != rootNodeID && !aggregator.isCompleted($0.id) }
+        guard limit > 0,
+              firstVisibleDirectory || Date().timeIntervalSince(lastProgressivePublication) * 1000
+                >= Double(configuration.progressiveIntervalMilliseconds) else { return }
+        let totals = try aggregator.progressiveTotals(root: rootNodeID)
+        let finalIDs = Set(pendingAggregates.map(\.nodeID))
+        let eligible = totals.filter {
+            selfComplete.contains($0.key) && !aggregator.isCompleted($0.key)
+                && !finalIDs.contains($0.key) && $0.value.attributed > 0
+        }.sorted {
+            if $0.key == rootNodeID { return true }
+            if $1.key == rootNodeID { return false }
+            if $0.value.attributed != $1.value.attributed {
+                return $0.value.attributed > $1.value.attributed
+            }
+            return $0.key.rawValue < $1.key.rawValue
+        }
+        guard !eligible.isEmpty else { return }
+        lastProgressivePublication = Date()
+        if eligible.contains(where: { $0.key != rootNodeID }) { publishedProgressiveDescendant = true }
+        for (node, value) in eligible.prefix(limit) {
+            pendingAggregates.append(DirectoryAggregateRecord(
+                nodeID: node, logicalBytes: value.logical, allocatedBytes: value.allocated,
+                attributedBytes: value.attributed, descendantFileCount: value.fileCount,
+                descendantDirectoryCount: value.directoryCount,
+                inaccessibleDescendantCount: value.inaccessible, isComplete: false
+            ))
+        }
     }
 
     private func emitProgress() async throws {
         let elapsed = Date().timeIntervalSince(startedAt)
         let entries = try ScanCounter.increment(fileCount, by: directoryCount)
         let rate = elapsed > 0 ? Double(entries) / elapsed : 0
-        let rootAttributed = try aggregator.currentTotals(of: rootNodeID).attributed
+        let rootAttributed = max(try aggregator.currentTotals(of: rootNodeID).attributed,
+                                 bestKnownLiveAttributedBytes)
         let queued = UInt64(max(0, activeQueuedCount))
         let spooled = UInt64(max(0, spool?.count ?? 0))
         let pending = try ScanCounter.increment(queued, by: spooled)
@@ -1120,25 +1322,61 @@ actor ScanCoordinator {
         )
     }
 
+    /// Acquires the single-writer event gate, queueing behind any delivery that
+    /// already holds it. The actor serializes callers, so the queue order is
+    /// exactly the order in which deliveries were initiated.
+    private func acquireEmitOwnership() async {
+        if !emitOwnershipHeld {
+            emitOwnershipHeld = true
+            return
+        }
+        await withCheckedContinuation { continuation in
+            emitWaiters.append(continuation)
+        }
+        // Ownership was transferred directly by `releaseEmitOwnership`; the
+        // gate is still held and no other caller can be inside it.
+    }
+
+    /// Releases the gate. Ownership is handed straight to the queue head while
+    /// remaining held, so a fresh `emit` cannot slip in front of a waiter.
+    private func releaseEmitOwnership() {
+        if emitWaiters.isEmpty {
+            emitOwnershipHeld = false
+        } else {
+            let next = emitWaiters.removeFirst()
+            next.resume()
+        }
+    }
+
     /// True backpressure: a dropped event is retried until the consumer makes
     /// room or terminates. Once a public cancel is in effect, non-terminal
     /// events are dropped instead of published; the terminal event (including
     /// the `cancelled` summary) is always retried.
-    private func emit(_ event: ScanEvent, isTerminal: Bool = false) async {
-        guard let continuation else { return }
+    ///
+    /// Every delivery runs under the FIFO gate, so a suspended retry holds
+    /// delivery ownership and later workers cannot publish ahead of it.
+    ///
+    /// Returns `true` when the event was handed to the stream (`.enqueued`) and
+    /// `false` when it was suppressed by cancellation or a terminated stream.
+    /// `flush` uses this to retain a cancelled batch's directory identities.
+    @discardableResult
+    private func emit(_ event: ScanEvent, isTerminal: Bool = false) async -> Bool {
+        guard let continuation else { return false }
+        await acquireEmitOwnership()
+        defer { releaseEmitOwnership() }
         while true {
             if cancelled, !isTerminal {
-                return
+                return false
             }
             switch continuation.yield(event) {
             case .enqueued:
-                return
+                return true
             case .dropped:
                 try? await Task.sleep(nanoseconds: 1_000_000)
             case .terminated:
-                return
+                return false
             @unknown default:
-                return
+                return false
             }
         }
     }
@@ -1146,7 +1384,8 @@ actor ScanCoordinator {
     // MARK: Summary
 
     private func buildSummary(status: ScanStatus) throws -> ScanSummary {
-        let rootAttributed = try aggregator.currentTotals(of: rootNodeID).attributed
+        let folded = try aggregator.currentTotals(of: rootNodeID).attributed
+        let rootAttributed = status == .cancelled ? max(folded, bestKnownLiveAttributedBytes) : folded
         return ScanSummary(
             scanID: scanID,
             status: status,

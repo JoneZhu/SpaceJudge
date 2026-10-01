@@ -23,14 +23,16 @@ source "$SCRIPT_DIR/lib.sh"
 OUTPUT_DIR=""
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 KEEP_WORK=0
+WITH_CLI=0
 
 usage() {
     cat <<'USAGE'
-Usage: local-candidate.sh --output-dir <absolute-dir> [--repo <path>] [--keep-work]
+Usage: local-candidate.sh --output-dir <absolute-dir> [--repo <path>] [--keep-work] [--with-cli]
 
   --output-dir   Absolute directory that must not exist or must be empty.
   --repo         Repository root (defaults to the parent of scripts/release).
   --keep-work    Keep the task temp build directory for inspection.
+  --with-cli     Build and explicitly sign a universal SpaceJudge CLI helper.
 USAGE
 }
 
@@ -48,6 +50,10 @@ while [ "$#" -gt 0 ]; do
             ;;
         --keep-work)
             KEEP_WORK=1
+            shift
+            ;;
+        --with-cli)
+            WITH_CLI=1
             shift
             ;;
         -h|--help)
@@ -120,6 +126,26 @@ fi
 sj_mkdirs "$WORK_DIR/staging"
 ditto "$BUILT_APP" "$WORK_APP"
 
+if [ "$WITH_CLI" -eq 1 ]; then
+    sj_log "building universal read-only CLI helper"
+    for cli_arch in arm64 x86_64; do
+        cli_scratch="$WORK_DIR/cli-$cli_arch"
+        if ! /usr/bin/xcrun swift build --package-path "$REPO_DIR" --scratch-path "$cli_scratch" \
+            -c release --arch "$cli_arch" --product spacejudge-agent-cli \
+            >"$LOG_DIR/cli-$cli_arch.log" 2>&1; then
+            tail -40 "$LOG_DIR/cli-$cli_arch.log" >&2 || true
+            sj_die "CLI $cli_arch build failed"
+        fi
+    done
+    sj_mkdirs "$WORK_APP/Contents/Helpers"
+    CLI_HELPER="$WORK_APP/Contents/Helpers/spacejudge-agent-cli"
+    /usr/bin/lipo -create "$WORK_DIR/cli-arm64/arm64-apple-macosx/release/spacejudge-agent-cli" \
+        "$WORK_DIR/cli-x86_64/x86_64-apple-macosx/release/spacejudge-agent-cli" -output "$CLI_HELPER"
+    chmod 755 "$CLI_HELPER"
+    sj_codesign --force --options runtime --timestamp=none --sign - "$CLI_HELPER" \
+        >"$LOG_DIR/codesign-cli.log" 2>&1 || sj_die "CLI signing failed"
+fi
+
 sj_log "validating version consistency"
 sj_check_version_consistency "$REPO_DIR" "$WORK_APP"
 
@@ -178,6 +204,10 @@ sj_manifest_add_string gitState "$(sj_git_state "$REPO_DIR")"
 sj_manifest_add_string sha256 "$SHA256"
 sj_manifest_add_string generatedAt "$(sj_now_iso8601)"
 sj_manifest_add_string tool "local-candidate.sh"
+if [ "$WITH_CLI" -eq 1 ]; then
+    sj_manifest_add_string bundledCLI "Contents/Helpers/spacejudge-agent-cli"
+    sj_manifest_add_string bundledCLISHA256 "$(sj_sha256 "$CLI_HELPER")"
+fi
 sj_manifest_close
 plutil -p "$MANIFEST" >/dev/null || sj_die "generated manifest is not valid"
 

@@ -72,6 +72,10 @@ final class SuspendingDirectoryAccess: DirectoryAccess {
 // MARK: - Repository double
 
 actor StubSnapshotRepository: SnapshotRepository {
+    enum StubRepositoryError: Error, Equatable {
+        case injectedPageFailure
+    }
+
     enum Call: Equatable {
         case begin(ScanID)
         case write(Revision)
@@ -82,9 +86,15 @@ actor StubSnapshotRepository: SnapshotRepository {
 
     private(set) var calls: [Call] = []
     private var pagesByParent: [NodeID: SnapshotChildPage] = [:]
+    private var failingParents: Set<NodeID> = []
     private var issues: [IssueAggregateSummary] = []
     private var requestLimits: [Int] = []
     private var pageDelayNanoseconds: UInt64 = 0
+    private var aggregateDelayNanoseconds: UInt64 = 0
+    private var aggregateGates: [NodeID: DispatchSemaphore] = [:]
+    private var aggregateCallsMadeValue = 0
+    private var aggregateActiveCount = 0
+    private var aggregatePeakConcurrencyValue = 0
     private var ancestorsByNode: [NodeID: [NodeRecord]] = [:]
     private var namesByID: [NameID: NameRecord] = [:]
     private var aggregatesByNode: [NodeID: DirectoryAggregateRecord] = [:]
@@ -92,6 +102,16 @@ actor StubSnapshotRepository: SnapshotRepository {
 
     func setPage(_ page: SnapshotChildPage, for parent: NodeID) {
         pagesByParent[parent] = page
+    }
+
+    /// Makes every `childPage` read for `parent` throw, used to exercise the
+    /// scene-error presentation without a real store failure.
+    func setPageFailure(for parent: NodeID) {
+        failingParents.insert(parent)
+    }
+
+    func clearPageFailure(for parent: NodeID) {
+        failingParents.remove(parent)
     }
 
     func setAncestors(_ nodes: [NodeRecord], for node: NodeID) {
@@ -117,6 +137,20 @@ actor StubSnapshotRepository: SnapshotRepository {
     func setPageDelay(nanoseconds: UInt64) {
         pageDelayNanoseconds = nanoseconds
     }
+
+    func setAggregateDelay(nanoseconds: UInt64) {
+        aggregateDelayNanoseconds = nanoseconds
+    }
+
+    /// Blocks `aggregate` for one node on a semaphore. The wait ignores task
+    /// cancellation, modelling a loader stuck in SQLite queueing.
+    func setAggregateGate(_ gate: DispatchSemaphore, for nodeID: NodeID) {
+        aggregateGates[nodeID] = gate
+    }
+
+    var aggregateCallsMade: Int { aggregateCallsMadeValue }
+    var aggregateActiveCalls: Int { aggregateActiveCount }
+    var aggregatePeakConcurrency: Int { aggregatePeakConcurrencyValue }
 
     var recordedLimits: [Int] { requestLimits }
 
@@ -144,12 +178,19 @@ actor StubSnapshotRepository: SnapshotRepository {
         (pagesByParent[nodeID]?.items ?? []).map(\.node)
     }
 
+    func child(named bytes: Data, of parent: NodeID, in scanID: ScanID) async throws -> NodeRecord? {
+        (pagesByParent[parent]?.items ?? []).first { $0.name.utf8 == bytes }?.node
+    }
+
     func childPage(
         of nodeID: NodeID,
         in scanID: ScanID,
         limit: Int
     ) async throws -> SnapshotChildPage {
         requestLimits.append(limit)
+        if failingParents.contains(nodeID) {
+            throw StubRepositoryError.injectedPageFailure
+        }
         if pageDelayNanoseconds > 0 {
             try? await Task.sleep(nanoseconds: pageDelayNanoseconds)
         }
@@ -173,7 +214,24 @@ actor StubSnapshotRepository: SnapshotRepository {
         of nodeID: NodeID,
         in scanID: ScanID
     ) async throws -> DirectoryAggregateRecord? {
-        aggregatesByNode[nodeID]
+        // Read before the delay so a test can prove that a slow, stale query
+        // does not overwrite a newer complete aggregate.
+        let value = aggregatesByNode[nodeID]
+        aggregateCallsMadeValue += 1
+        aggregateActiveCount += 1
+        aggregatePeakConcurrencyValue = max(aggregatePeakConcurrencyValue, aggregateActiveCount)
+        defer { aggregateActiveCount -= 1 }
+        if let gate = aggregateGates[nodeID] {
+            await withCheckedContinuation { continuation in
+                DispatchQueue.global().async {
+                    gate.wait()
+                    continuation.resume()
+                }
+            }
+        } else if aggregateDelayNanoseconds > 0 {
+            try? await Task.sleep(nanoseconds: aggregateDelayNanoseconds)
+        }
+        return value
     }
 
     func ancestors(of nodeID: NodeID, in scanID: ScanID) async throws -> [NodeRecord] {

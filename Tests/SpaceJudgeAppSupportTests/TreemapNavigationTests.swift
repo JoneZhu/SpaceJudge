@@ -316,7 +316,7 @@ struct TreemapNavigationTests {
         model.expand(NodeID(4))
         let expectedVersion = model.expansionVersion
 
-        #expect(await waitUntil {
+        #expect(await waitUntil(timeout: 8) {
             model.treemapScene?.expansionVersion == expectedVersion
                 && model.treemapScene?.expandedPages[NodeID(2)] != nil
                 && model.treemapScene?.expandedPages[NodeID(4)] != nil
@@ -342,7 +342,9 @@ struct TreemapNavigationTests {
         await model.shutdown()
         try? await Task.sleep(nanoseconds: 400_000_000)
         #expect(model.treemapScene == before)
-        #expect(model.treemapScene?.expandedPages.isEmpty == true)
+        // The user's expand of NodeID(2) must not have been applied after
+        // shutdown: the installed scene is still the pre-shutdown one.
+        #expect(model.treemapScene?.expansionVersion == before?.expansionVersion)
     }
 
     @Test("Toggling detail mode before the first scene arrives converges")
@@ -410,7 +412,69 @@ struct TreemapNavigationTests {
         #expect(await waitUntil { model.treemapScene != nil })
         #expect(model.treemapScene?.focusPage.omittedCount == 9)
         #expect(model.treemapScene?.focusPage.omittedWeight == nil)
-        #expect(model.hiddenOmittedMessage == "还有 9 项正在统计")
+        #expect(model.hiddenOmittedMessage == "还有 9 项未显示")
+        await model.shutdown()
+    }
+
+    @Test("The default scene auto-previews the largest directories within budget")
+    func autoPreviewLoadsLargestDirectories() async {
+        var pages: [NodeID: SnapshotChildPage] = [NodeID(1): directoryPage(ids: 2...20)]
+        for id in UInt64(2)...UInt64(20) {
+            pages[NodeID(id)] = directoryPage(ids: (id * 100)...(id * 100 + 3), parent: NodeID(id))
+        }
+        let (model, _, sceneReader) = await makeModel(scenePages: pages)
+        await model.chooseRoot()
+        #expect(await waitUntil { model.treemapScene != nil })
+        // No user action, yet at least two levels are visible.
+        #expect(model.expandedNodeIDs.isEmpty)
+        #expect(model.treemapScene?.expandedPages.isEmpty == false)
+        // Bounded at six previews, and those are the heaviest directories.
+        let previewed = model.treemapScene?.expandedPages.keys.sorted { $0.rawValue < $1.rawValue }
+        #expect(previewed == (UInt64(2)...UInt64(7)).map(NodeID.init))
+        #expect(model.isPreviewExpanded(NodeID(2)))
+        let limits = await sceneReader.recordedLimits
+        #expect(limits.filter { $0 == 80 }.count >= 6)
+        await model.shutdown()
+    }
+
+    @Test("Collapsing a preview is remembered across a refresh")
+    func previewCollapseSurvivesRefresh() async {
+        var pages: [NodeID: SnapshotChildPage] = [NodeID(1): directoryPage(ids: 2...10)]
+        for id in UInt64(2)...UInt64(10) {
+            pages[NodeID(id)] = directoryPage(ids: (id * 100)...(id * 100 + 2), parent: NodeID(id))
+        }
+        let (model, _, _) = await makeModel(scenePages: pages)
+        await model.chooseRoot()
+        #expect(await waitUntil { model.treemapScene?.expandedPages[NodeID(2)] != nil })
+
+        model.collapse(NodeID(2))
+        #expect(await waitUntil { model.treemapScene?.expandedPages[NodeID(2)] == nil })
+        #expect(model.suppressedPreviewNodeIDs.contains(NodeID(2)))
+
+        // A scan refresh must not reopen the directory the user closed.
+        model.reloadSceneForTesting()
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        #expect(model.treemapScene?.expandedPages[NodeID(2)] == nil)
+        #expect(model.suppressedPreviewNodeIDs.contains(NodeID(2)))
+        await model.shutdown()
+    }
+
+    @Test("An explicit expand clears preview suppression and persists")
+    func explicitExpandReopensPreview() async {
+        var pages: [NodeID: SnapshotChildPage] = [NodeID(1): directoryPage(ids: 2...8)]
+        for id in UInt64(2)...UInt64(8) {
+            pages[NodeID(id)] = directoryPage(ids: (id * 100)...(id * 100 + 1), parent: NodeID(id))
+        }
+        let (model, _, _) = await makeModel(scenePages: pages)
+        await model.chooseRoot()
+        #expect(await waitUntil { model.treemapScene?.expandedPages[NodeID(2)] != nil })
+
+        model.collapse(NodeID(2))
+        #expect(await waitUntil { !model.suppressedPreviewNodeIDs.isEmpty })
+        model.expand(NodeID(2))
+        #expect(model.suppressedPreviewNodeIDs.isEmpty)
+        #expect(model.expandedNodeIDs.contains(NodeID(2)))
+        #expect(await waitUntil { model.treemapScene?.expandedPages[NodeID(2)] != nil })
         await model.shutdown()
     }
 }

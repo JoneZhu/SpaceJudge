@@ -35,3 +35,11 @@
 - [Removable volumes usage description](https://developer.apple.com/documentation/bundleresources/information-property-list/nsremovablevolumesusagedescription)：可移动卷访问的目的说明；同组还包括 Documents、Downloads 和 network volumes。
 
 文档中的性能目标与实现取舍还需要项目自身基准验证；引用系统 API 文档不等于已经证明性能。
+
+## MCP / OpenAI
+
+- [OpenAI：Build your MCP server](https://developers.openai.com/plugins/build/mcp-server)：MCP server 的工具、结构化结果、授权与测试建议。
+- [OpenAI：Define tools](https://developers.openai.com/plugins/plan/tools)：聚焦的工具表面、稳定 schema 与 `readOnlyHint` / `destructiveHint` / `openWorldHint` 注解语义。
+- [OpenAI：Use MCP servers with ChatGPT and Codex](https://learn.chatgpt.com/docs/extend/mcp)：本地 stdio MCP 在 Codex 桌面端、CLI 和 IDE 中的配置与 ChatGPT Web 边界。
+- [Model Context Protocol TypeScript SDK v2：Build your first server](https://ts.sdk.modelcontextprotocol.io/v2/get-started/first-server)：Node.js 20+、`@modelcontextprotocol/server`、Zod v4、stdio stdout/stderr 约束。
+- [MCP TypeScript SDK v2：Protocol version compatibility](https://ts.sdk.modelcontextprotocol.io/v2/protocol-versions)：`serveStdio` 的现代与 legacy 协议兼容策略。

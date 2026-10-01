@@ -2,7 +2,7 @@
 
 状态：Pi 实施与自测完成；Codex 已独立验收，最终结论见 [Phase 5C 验收基线](21-phase-5c-baseline.md)。
 日期：2026-09-27
-工作位置：`/Users/hongdazhu/Documents/ChatGPT/SpaceJudge`（工作树，未 commit）
+工作位置：`/Users/example/Documents/ChatGPT/SpaceJudge`（工作树，未 commit）
 原始日志目录：`/tmp/spacejudge-phase5c-pi.4KC9UY`
 真实 smoke 目录：`/tmp/spacejudge-phase5c-smoke.JkeEXh`（最终一次；此前一次为 `d3O18F`）
 

@@ -15,6 +15,8 @@ public actor SQLiteSnapshotRepository: SnapshotRepository {
     private let now: @Sendable () -> Date
     private let capacityProvider: any StorageCapacityProviding
     private let spacePolicy: StorageSpacePolicy
+    private let maximumRetainedScans: Int
+    private var retainedRefreshScan: ScanID?
 
     /// Pages reclaimed per bounded `incremental_vacuum` call. Small enough that
     /// maintenance never blocks the UI while hundreds of MB are reclaimed.
@@ -26,6 +28,7 @@ public actor SQLiteSnapshotRepository: SnapshotRepository {
         path: String,
         capacityProvider: (any StorageCapacityProviding)? = nil,
         spacePolicy: StorageSpacePolicy = .standard,
+        maximumRetainedScans: Int = 1,
         now: @escaping @Sendable () -> Date = { Date() }
     ) throws {
         let writer = try SQLiteDatabase(
@@ -65,6 +68,7 @@ public actor SQLiteSnapshotRepository: SnapshotRepository {
                 directoryPath: (path as NSString).deletingLastPathComponent
             )
         self.spacePolicy = spacePolicy
+        self.maximumRetainedScans = max(1, min(2, maximumRetainedScans))
     }
 
     private init(readOnlyHandle: SQLiteDatabase, now: @escaping @Sendable () -> Date) {
@@ -74,6 +78,7 @@ public actor SQLiteSnapshotRepository: SnapshotRepository {
         self.now = now
         self.capacityProvider = FixedStorageCapacityProvider(bytes: nil)
         self.spacePolicy = .standard
+        self.maximumRetainedScans = 1
     }
 
     /// Opens a read-only view over an existing database. Used by tests and by
@@ -152,6 +157,10 @@ public actor SQLiteSnapshotRepository: SnapshotRepository {
 
     // MARK: Writes
 
+    public func retainForRefresh(_ scanID: ScanID?) async {
+        if !readOnly, maximumRetainedScans == 2 { retainedRefreshScan = scanID }
+    }
+
     public func begin(_ metadata: ScanMetadata) async throws {
         try requireWritable()
         let scanText = metadata.scanID.rawValue.uuidString
@@ -165,7 +174,14 @@ public actor SQLiteSnapshotRepository: SnapshotRepository {
             // gate below. A gate failure rolls the whole transaction back, so a
             // refused begin keeps the previous snapshot intact and leaves no
             // fake `running` row.
-            try self.writer.execute("DELETE FROM scans")
+            if self.maximumRetainedScans == 2, let retained = self.retainedRefreshScan {
+                let delete = try self.writer.prepare("DELETE FROM scans WHERE id != ?")
+                defer { delete.finalize() }
+                try delete.bindText(1, retained.rawValue.uuidString)
+                _ = try delete.step()
+            } else {
+                try self.writer.execute("DELETE FROM scans")
+            }
             switch try self.spaceDecision(required: self.spacePolicy.startGateBytes) {
             case .unavailable:
                 throw SnapshotStoreError.storageCapacityUnavailable
@@ -686,6 +702,21 @@ public actor SQLiteSnapshotRepository: SnapshotRepository {
     }
 
     // MARK: Reads
+
+    public func child(named bytes: Data, of parent: NodeID, in scanID: ScanID) async throws -> NodeRecord? {
+        let statement = try reader.prepare("""
+            SELECT n.id, n.parent_id, n.name_id, n.kind, n.flags, n.logical_bytes,
+                   n.allocated_bytes, n.attributed_bytes, n.modified_at, n.device_id, n.file_id
+            FROM nodes n JOIN names m ON m.scan_id = n.scan_id AND m.id = n.name_id
+            WHERE n.scan_id = ? AND n.parent_id = ? AND m.utf8 = ? LIMIT 1
+            """)
+        defer { statement.finalize() }
+        try statement.bindText(1, scanID.rawValue.uuidString)
+        try statement.bindBlob(2, UInt64BlobCodec.encode(parent.rawValue))
+        try statement.bindBlob(3, bytes)
+        guard try statement.step() else { return nil }
+        return try Self.nodeRecord(from: statement, scanID: scanID)
+    }
 
     public func children(of nodeID: NodeID, in scanID: ScanID) async throws -> [NodeRecord] {
         let statement = try reader.prepare(

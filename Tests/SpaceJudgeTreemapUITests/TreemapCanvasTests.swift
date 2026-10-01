@@ -92,6 +92,55 @@ struct TreemapCanvasTests {
         }
     }
 
+    @Test("Codex context menu binds the exact clicked node and never targets Other")
+    func codexMenuScope() throws {
+        let view = makeView()
+        var analyzed: [TreemapRenderTile.Identity] = []
+        view.actions = TreemapCanvasActions(analyze: { analyzed.append($0.identity) }, canAnalyze: { _ in true })
+        for tile in try #require(view.renderSnapshot).tiles {
+            let menu = view.makeContextMenu(for: tile)
+            let item = try #require(menu.items.first { $0.title == "用 Codex 分析…" })
+            #expect(item.isEnabled)
+            _ = view.perform(try #require(item.action), with: item)
+            #expect(analyzed.last == tile.identity)
+        }
+        let other = UITestSupport.other(1, bounds)
+        #expect(!view.makeContextMenu(for: other).items.contains { $0.title == "用 Codex 分析…" })
+    }
+
+    @Test("Disabled Codex action stays disabled and rechecks eligibility at dispatch")
+    func codexMenuEligibility() throws {
+        let view = makeView()
+        var allowed = false
+        var calls = 0
+        view.actions = TreemapCanvasActions(analyze: { _ in calls += 1 }, canAnalyze: { _ in allowed })
+        let tile = try #require(view.renderSnapshot?.tiles.first)
+        let menu = view.makeContextMenu(for: tile)
+        let disabled = try #require(menu.items.first { $0.title == "用 Codex 分析…" })
+        #expect(!menu.autoenablesItems)
+        #expect(!disabled.isEnabled)
+        _ = view.perform(try #require(disabled.action), with: disabled)
+        #expect(calls == 0)
+        allowed = true
+        let enabled = try #require(view.makeContextMenu(for: tile).items.first { $0.title == "用 Codex 分析…" })
+        #expect(enabled.isEnabled)
+        allowed = false
+        _ = view.perform(try #require(enabled.action), with: enabled)
+        #expect(calls == 0)
+    }
+
+    @Test("Menu opened on an old scene cannot analyze after the snapshot is cleared")
+    func codexMenuStale() throws {
+        let view = makeView()
+        var calls = 0
+        view.actions = TreemapCanvasActions(analyze: { _ in calls += 1 }, canAnalyze: { _ in true })
+        let tile = try #require(view.renderSnapshot?.tiles.first)
+        let item = try #require(view.makeContextMenu(for: tile).items.first { $0.title == "用 Codex 分析…" })
+        view.clearRenderSnapshot()
+        _ = view.perform(try #require(item.action), with: item)
+        #expect(calls == 0)
+    }
+
     @Test("Selection changes invalidate and reach the model action")
     func selectionCentralized() {
         var selected: [TreemapRenderTile] = []

@@ -13,8 +13,11 @@ public struct TreemapCanvasActions {
     public var doubleClick: (TreemapRenderTile) -> Void
     public var enterDirectory: (TreemapRenderTile) -> Void
     public var expand: (TreemapRenderTile) -> Void
+    public var collapse: (TreemapRenderTile) -> Void
     public var showInfo: (TreemapRenderTile) -> Void
     public var reveal: (TreemapRenderTile) -> Void
+    public var analyze: ((TreemapRenderTile) -> Void)?
+    public var canAnalyze: (TreemapRenderTile) -> Bool
     public var keyboardEnter: (TreemapRenderTile, Bool) -> Void
     public var escape: () -> Void
 
@@ -24,8 +27,11 @@ public struct TreemapCanvasActions {
         doubleClick: @escaping (TreemapRenderTile) -> Void = { _ in },
         enterDirectory: @escaping (TreemapRenderTile) -> Void = { _ in },
         expand: @escaping (TreemapRenderTile) -> Void = { _ in },
+        collapse: @escaping (TreemapRenderTile) -> Void = { _ in },
         showInfo: @escaping (TreemapRenderTile) -> Void = { _ in },
         reveal: @escaping (TreemapRenderTile) -> Void = { _ in },
+        analyze: ((TreemapRenderTile) -> Void)? = nil,
+        canAnalyze: @escaping (TreemapRenderTile) -> Bool = { _ in false },
         keyboardEnter: @escaping (TreemapRenderTile, Bool) -> Void = { _, _ in },
         escape: @escaping () -> Void = {}
     ) {
@@ -34,8 +40,11 @@ public struct TreemapCanvasActions {
         self.doubleClick = doubleClick
         self.enterDirectory = enterDirectory
         self.expand = expand
+        self.collapse = collapse
         self.showInfo = showInfo
         self.reveal = reveal
+        self.analyze = analyze
+        self.canAnalyze = canAnalyze
         self.keyboardEnter = keyboardEnter
         self.escape = escape
     }
@@ -463,6 +472,7 @@ public final class TreemapCanvasView: NSView {
     /// of write actions can be asserted directly.
     func makeContextMenu(for tile: TreemapRenderTile) -> NSMenu {
         let menu = NSMenu()
+        menu.autoenablesItems = false
         if tile.isOther {
             let item = NSMenuItem(
                 title: "其他（\(tile.collapsedCount) 项，\(ByteFormattingShort.bytes(tile.effectiveBytes))）",
@@ -473,7 +483,9 @@ public final class TreemapCanvasView: NSView {
             menu.addItem(item)
         } else if let kind = tile.kind, kind.isDirectoryLike {
             menu.addItem(menuItem(title: "进入目录", action: #selector(handleEnterMenu(_:)), tile: tile))
-            if !tile.isExpanded {
+            if tile.isExpanded {
+                menu.addItem(menuItem(title: "折叠", action: #selector(handleCollapseMenu(_:)), tile: tile))
+            } else {
                 menu.addItem(menuItem(title: "展开", action: #selector(handleExpandMenu(_:)), tile: tile))
             }
             menu.addItem(.separator())
@@ -483,20 +495,28 @@ public final class TreemapCanvasView: NSView {
             menu.addItem(menuItem(title: "查看信息", action: #selector(handleInfoMenu(_:)), tile: tile))
             menu.addItem(menuItem(title: "在 Finder 中显示", action: #selector(handleRevealMenu(_:)), tile: tile))
         }
+        if !tile.isOther, tile.identity.nodeID != nil, actions.analyze != nil {
+            menu.addItem(.separator())
+            let item = menuItem(title: "用 Codex 分析…", action: #selector(handleAnalyzeMenu(_:)), tile: tile)
+            item.isEnabled = actions.canAnalyze(tile)
+            menu.addItem(item)
+        }
         return menu
     }
 
     private func menuItem(title: String, action: Selector, tile: TreemapRenderTile) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
-        item.representedObject = MenuPayload(tile: tile)
+        item.representedObject = MenuPayload(tile: tile, key: renderSnapshot?.key)
         return item
     }
 
     private final class MenuPayload: NSObject {
         let tile: TreemapRenderTile
-        init(tile: TreemapRenderTile) {
+        let key: TreemapLayoutKey?
+        init(tile: TreemapRenderTile, key: TreemapLayoutKey?) {
             self.tile = tile
+            self.key = key
         }
     }
 
@@ -510,6 +530,11 @@ public final class TreemapCanvasView: NSView {
         actions.expand(payload.tile)
     }
 
+    @objc private func handleCollapseMenu(_ sender: NSMenuItem) {
+        guard let payload = sender.representedObject as? MenuPayload else { return }
+        actions.collapse(payload.tile)
+    }
+
     @objc private func handleInfoMenu(_ sender: NSMenuItem) {
         guard let payload = sender.representedObject as? MenuPayload else { return }
         actions.showInfo(payload.tile)
@@ -518,6 +543,14 @@ public final class TreemapCanvasView: NSView {
     @objc private func handleRevealMenu(_ sender: NSMenuItem) {
         guard let payload = sender.representedObject as? MenuPayload else { return }
         actions.reveal(payload.tile)
+    }
+
+    @objc private func handleAnalyzeMenu(_ sender: NSMenuItem) {
+        guard let payload = sender.representedObject as? MenuPayload,
+              let key = payload.key, renderSnapshot?.key == key,
+              !payload.tile.isOther, payload.tile.identity.nodeID != nil,
+              actions.canAnalyze(payload.tile) else { return }
+        actions.analyze?(payload.tile)
     }
 
     // MARK: Keyboard

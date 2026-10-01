@@ -87,6 +87,14 @@ public actor PersistingScanRunner {
         var lastProgress: ScanProgress?
         var terminal: ScanSummary?
         var persistedIssueCount: UInt64 = 0
+        /// A terminal event was received from the engine (even if persisting it
+        /// failed). The synthesized-cancel fallback must not mask a failed
+        /// terminal persistence as a cancellation.
+        var receivedTerminal = false
+        /// Last revision actually received from the engine. The cancelled
+        /// checkpoint batch uses this + 1, never the engine's internal counter
+        /// which may have advanced for a suppressed flush.
+        var lastReceivedRevision: Revision?
 
         do {
             for try await event in engine.events(for: request) {
@@ -111,6 +119,7 @@ public actor PersistingScanRunner {
                         )
                     }
                     try await repository.write(batch)
+                    lastReceivedRevision = batch.revision
                     onUpdate(.committed(scanID: scanID, revision: batch.revision))
 
                 case .issue(let issue):
@@ -143,6 +152,7 @@ public actor PersistingScanRunner {
                     }
 
                 case .completed(let summary):
+                    receivedTerminal = true
                     try await finish(
                         summary,
                         expected: .completed,
@@ -153,6 +163,13 @@ public actor PersistingScanRunner {
                     onUpdate(.terminal(summary))
 
                 case .cancelled(let summary):
+                    receivedTerminal = true
+                    if let scanID = startedScanID {
+                        try await persistCancelledCheckpoint(
+                            scanID: scanID,
+                            lastReceivedRevision: lastReceivedRevision
+                        )
+                    }
                     try await finish(
                         summary,
                         expected: .cancelled,
@@ -175,8 +192,20 @@ public actor PersistingScanRunner {
             // consistent `cancelled` terminal from the last persisted and
             // progress facts. Only a cancelled *Task* with a started scan and no
             // terminal qualifies: ordinary store/stream errors still fail.
-            if let scanID = startedScanID, Task.isCancelled, terminal == nil {
+            if let scanID = startedScanID, Task.isCancelled, terminal == nil, !receivedTerminal {
                 await engine.cancel(scanID: scanID)
+                do {
+                    try await persistCancelledCheckpoint(
+                        scanID: scanID,
+                        lastReceivedRevision: lastReceivedRevision
+                    )
+                } catch {
+                    // The checkpoint could not be stored. Never publish a
+                    // cancelled terminal the database cannot back: fail the
+                    // snapshot and rethrow.
+                    try? await repository.fail(scanID: scanID)
+                    throw error
+                }
                 let summary = Self.cancelledSummary(
                     scanID: scanID,
                     metadata: startedMetadata,
@@ -237,8 +266,7 @@ public actor PersistingScanRunner {
         expected: ScanStatus,
         startedScanID: ScanID?,
         terminal: ScanSummary?
-    ) async throws {
-        guard let scanID = startedScanID else {
+    ) async throws {        guard let scanID = startedScanID else {
             throw PersistingScanRunnerError.eventBeforeStarted
         }
         guard summary.scanID == scanID else {
@@ -257,5 +285,33 @@ public actor PersistingScanRunner {
             )
         }
         try await repository.finish(summary)
+    }
+
+    /// Persists the engine's optional cancelled directory checkpoint as one
+    /// bounded batch before the `cancelled` terminal, so committed leaves keep
+    /// a reachable ancestor chain. Uses the runner's own last received revision
+    /// + 1 (an engine may have advanced its counter for a suppressed flush) and
+    /// publishes no ordinary `onUpdate`.
+    ///
+    /// A checkpoint write failure is left to the caller's existing failure
+    /// handling: it must never publish a `cancelled` terminal the database
+    /// cannot back.
+    private func persistCancelledCheckpoint(
+        scanID: ScanID,
+        lastReceivedRevision: Revision?
+    ) async throws {
+        guard let provider = engine as? CancelledCheckpointProviding,
+              let checkpoint = await provider.takeCancelledCheckpoint(scanID: scanID),
+              !checkpoint.isEmpty else {
+            return
+        }
+        let revision = (lastReceivedRevision ?? Revision(0)).next
+        let batch = NodeBatch(
+            scanID: scanID,
+            revision: revision,
+            names: checkpoint.names,
+            nodes: checkpoint.directories
+        )
+        try await repository.write(batch)
     }
 }

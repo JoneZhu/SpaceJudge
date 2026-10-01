@@ -50,34 +50,50 @@ public struct TreemapColor: Sendable, Equatable, Hashable {
 
 /// Deterministic palette used by both the app canvas and the benchmark.
 public enum TreemapPalette {
-    /// Six low-saturation directory colors in a fixed order.
+    /// Six soft, low-saturation directory colors in a fixed order:
+    /// pale green, pale blue, pale sand, pale violet, pale peach, pale gray-green.
     public static let base: [TreemapColor] = [
-        TreemapColor(0.60, 0.82, 0.66),
-        TreemapColor(0.62, 0.78, 0.90),
-        TreemapColor(0.88, 0.84, 0.70),
-        TreemapColor(0.77, 0.71, 0.88),
-        TreemapColor(0.93, 0.79, 0.66),
-        TreemapColor(0.72, 0.80, 0.75)
+        TreemapColor(0.855, 0.910, 0.875),
+        TreemapColor(0.865, 0.907, 0.944),
+        TreemapColor(0.934, 0.900, 0.848),
+        TreemapColor(0.899, 0.888, 0.941),
+        TreemapColor(0.938, 0.889, 0.851),
+        TreemapColor(0.892, 0.925, 0.858)
     ]
 
+    /// Independently tuned dark colors (deeper and desaturated, not inverted).
     public static let baseDark: [TreemapColor] = [
-        TreemapColor(0.16, 0.34, 0.23),
-        TreemapColor(0.17, 0.31, 0.44),
-        TreemapColor(0.40, 0.36, 0.20),
-        TreemapColor(0.30, 0.25, 0.44),
-        TreemapColor(0.45, 0.30, 0.19),
-        TreemapColor(0.24, 0.32, 0.27)
+        TreemapColor(0.153, 0.278, 0.208),
+        TreemapColor(0.157, 0.243, 0.333),
+        TreemapColor(0.318, 0.275, 0.192),
+        TreemapColor(0.263, 0.231, 0.365),
+        TreemapColor(0.345, 0.255, 0.184),
+        TreemapColor(0.196, 0.286, 0.224)
     ]
 
-    public static let otherLight = TreemapColor(0.70, 0.70, 0.72)
-    public static let otherDark = TreemapColor(0.30, 0.30, 0.33)
+    public static let otherLight = TreemapColor(0.78, 0.79, 0.79)
+    public static let otherDark = TreemapColor(0.24, 0.25, 0.26)
 
     public static func background(_ appearance: TreemapAppearance) -> TreemapColor {
-        appearance == .light ? TreemapColor(0.95, 0.95, 0.96) : TreemapColor(0.10, 0.10, 0.11)
+        appearance == .light ? TreemapColor(0.965, 0.968, 0.962) : TreemapColor(0.10, 0.105, 0.102)
     }
 
+    /// Strong, clearly readable gray-green name color.
     public static func text(_ appearance: TreemapAppearance) -> TreemapColor {
-        appearance == .light ? TreemapColor(0.13, 0.13, 0.15) : TreemapColor(0.93, 0.93, 0.94)
+        appearance == .light
+            ? TreemapColor(0.145, 0.255, 0.196)
+            : TreemapColor(0.878, 0.933, 0.886)
+    }
+
+    /// One step weaker gray-green for the size line.
+    public static func secondaryText(_ appearance: TreemapAppearance) -> TreemapColor {
+        appearance == .light
+            ? TreemapColor(0.145, 0.255, 0.196).blended(
+                with: TreemapColor(0.46, 0.52, 0.48), fraction: 0.5
+            )
+            : TreemapColor(0.878, 0.933, 0.886).blended(
+                with: TreemapColor(0.52, 0.58, 0.54), fraction: 0.45
+            )
     }
 
     public static let accent = TreemapColor(0.20, 0.66, 0.42)
@@ -96,15 +112,15 @@ public enum TreemapPalette {
         let index = ((paletteIndex % colors.count) + colors.count) % colors.count
         let baseColor = colors[index]
         guard depth > 1 else { return baseColor }
-        // Descendants keep their top-level hue and step lighter with depth.
+        // Descendants keep their top-level hue and step slightly lighter/deeper.
         let target = appearance == .light
             ? TreemapColor(1, 1, 1)
             : TreemapColor(0, 0, 0)
-        let amount = min(0.18 * Double(depth - 1), 0.5)
+        let amount = min(0.12 * Double(depth - 1), 0.36)
         return baseColor.blended(with: target, fraction: amount)
     }
 
-    /// Slightly darker stroke for the fill.
+    /// Thin, light border color for the fill.
     public static func stroke(
         paletteIndex: Int,
         depth: Int,
@@ -118,9 +134,32 @@ public enum TreemapPalette {
             appearance: appearance
         )
         let target = appearance == .light
-            ? TreemapColor(0, 0, 0)
-            : TreemapColor(1, 1, 1)
-        return fill.blended(with: target, fraction: appearance == .light ? 0.18 : 0.16)
+            ? TreemapColor(0.30, 0.36, 0.33)
+            : TreemapColor(0.90, 0.94, 0.91)
+        return fill.blended(with: target, fraction: appearance == .light ? 0.16 : 0.14)
+    }
+
+    /// Header band color: coordinated with the directory group, not a single
+    /// shared green.
+    public static func header(
+        paletteIndex: Int,
+        depth: Int,
+        isOther: Bool,
+        appearance: TreemapAppearance
+    ) -> TreemapColor {
+        let fill = fill(
+            paletteIndex: paletteIndex,
+            depth: depth,
+            isOther: isOther,
+            appearance: appearance
+        )
+        let stroke = stroke(
+            paletteIndex: paletteIndex,
+            depth: depth,
+            isOther: isOther,
+            appearance: appearance
+        )
+        return fill.blended(with: stroke, fraction: 0.5)
     }
 }
 
@@ -136,6 +175,10 @@ public enum TreemapPalette {
 /// costs a few dozen `CGContext` state changes instead of two per tile. Colors
 /// and fonts are resolved once per call. Batching is emitted in ascending depth
 /// order so nested children always paint over their parents.
+///
+/// Text is the exception: every label is clipped to the tile (or its reserved
+/// header band for expanded directories), so a parent title can never bleed
+/// into a child tile even though labels are drawn after all fills.
 public struct TreemapRenderer: Sendable {
     public struct Options: Sendable, Equatable {
         public var appearance: TreemapAppearance
@@ -194,14 +237,13 @@ public struct TreemapRenderer: Sendable {
         }
         let bucketCount = maximumDepth * Self.slotsPerDepth
         var fillPaths = [CGMutablePath?](repeating: nil, count: bucketCount)
+        var headerPaths = [CGMutablePath?](repeating: nil, count: bucketCount)
         var strokeWidths = [CGFloat](repeating: 0, count: bucketCount)
-        let headerPath = CGMutablePath()
-        var headerHasContent = false
         let hoverPath = CGMutablePath()
         var hoverHasContent = false
         let selectedPath = CGMutablePath()
         var selectedHasContent = false
-        var labels: [(tile: TreemapRenderTile, rect: CGRect)] = []
+        var labels: [(tile: TreemapRenderTile, layout: TreemapTileChrome.TextLayout)] = []
 
         for tile in snapshot.tiles {
             let rect = tile.rect
@@ -217,13 +259,20 @@ public struct TreemapRenderer: Sendable {
             fillPaths[bucket] = path
             strokeWidths[bucket] = 1
 
+            // An expanded directory reserves a header; the band is filled with
+            // the group's own coordinated color, never a shared green.
             if tile.isExpanded, let content = tile.contentRect {
                 let headerHeight = max(0, CGFloat(content.y) - cgRect.minY)
                 if headerHeight > 1 {
-                    headerPath.addRect(
-                        CGRect(x: cgRect.minX, y: cgRect.minY, width: cgRect.width, height: headerHeight)
+                    let headerPath = headerPaths[bucket] ?? CGMutablePath()
+                    Self.addHeaderShape(
+                        to: headerPath,
+                        rect: CGRect(
+                            x: cgRect.minX, y: cgRect.minY,
+                            width: cgRect.width, height: headerHeight
+                        )
                     )
-                    headerHasContent = true
+                    headerPaths[bucket] = headerPath
                 }
             }
             if options.hovered == tile.identity {
@@ -234,8 +283,8 @@ public struct TreemapRenderer: Sendable {
                 Self.addShape(to: selectedPath, rect: cgRect)
                 selectedHasContent = true
             }
-            if options.drawsText, cgRect.width >= 32, cgRect.height >= 13 {
-                labels.append((tile, cgRect))
+            if options.drawsText, let layout = palette.textLayout(for: tile) {
+                labels.append((tile, layout))
             }
         }
 
@@ -249,10 +298,15 @@ public struct TreemapRenderer: Sendable {
                 context.fillPath()
             }
         }
-        if headerHasContent {
-            context.addPath(headerPath)
-            context.setFillColor(palette.header)
-            context.fillPath()
+        for depthIndex in 0..<maximumDepth {
+            let base = depthIndex * Self.slotsPerDepth
+            for slot in 0..<Self.slotsPerDepth {
+                let bucket = base + slot
+                guard let path = headerPaths[bucket] else { continue }
+                context.addPath(path)
+                context.setFillColor(palette.header(slot: slot, depthIndex: depthIndex))
+                context.fillPath()
+            }
         }
         for depthIndex in 0..<maximumDepth {
             let base = depthIndex * Self.slotsPerDepth
@@ -281,14 +335,14 @@ public struct TreemapRenderer: Sendable {
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
         for label in labels {
-            drawLabel(label.tile, cgRect: label.rect, palette: palette)
+            drawLabel(label.tile, layout: label.layout, palette: palette, context: context)
         }
         NSGraphicsContext.restoreGraphicsState()
     }
 
     private static func addShape(to path: CGMutablePath, rect: CGRect) {
         let minSide = min(rect.width, rect.height)
-        let radius = min(4.0, minSide / 4)
+        let radius = min(CGFloat(TreemapTileChrome.cornerRadius), minSide / 4)
         // Small tiles drop the rounded corners entirely: square rects rasterize
         // much faster and the visual difference is negligible below ~28 pt.
         if radius >= 0.75, minSide >= 28 {
@@ -298,58 +352,100 @@ public struct TreemapRenderer: Sendable {
         }
     }
 
+    /// A header band whose top corners match the tile radius and whose bottom
+    /// edge is square, so it reads as a band rather than a floating pill.
+    private static func addHeaderShape(to path: CGMutablePath, rect: CGRect) {
+        let minSide = min(rect.width, rect.height)
+        let radius = min(CGFloat(TreemapTileChrome.cornerRadius), max(0, minSide / 4))
+        guard radius >= 0.75, rect.width >= 28 else {
+            path.addRect(rect)
+            return
+        }
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + radius))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + radius, y: rect.minY),
+            control: CGPoint(x: rect.minX, y: rect.minY)
+        )
+        path.addLine(to: CGPoint(x: rect.maxX - radius, y: rect.minY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: rect.minY + radius),
+            control: CGPoint(x: rect.maxX, y: rect.minY)
+        )
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.closeSubpath()
+    }
+
     private func drawLabel(
         _ tile: TreemapRenderTile,
-        cgRect: CGRect,
-        palette: ResolvedPalette
+        layout: TreemapTileChrome.TextLayout,
+        palette: ResolvedPalette,
+        context: CGContext
     ) {
-        let nameRect = CGRect(
-            x: cgRect.minX + 4,
-            y: cgRect.minY + 3,
-            width: max(0, cgRect.width - 8),
-            height: 13
-        )
+        // Each label is clipped to its own region so a parent title can never
+        // draw over its children.
+        context.saveGState()
+        context.clip(to: CGRect(
+            x: layout.clipRegion.x,
+            y: layout.clipRegion.y,
+            width: layout.clipRegion.width,
+            height: layout.clipRegion.height
+        ))
+
         palette.nameString(tile.displayName).draw(
-            with: nameRect,
+            with: Self.cgRect(layout.nameRect),
             options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
             context: nil
         )
-        guard cgRect.height >= 30, cgRect.width >= 96 else { return }
-        let sizeRect = CGRect(
-            x: cgRect.minX + 4,
-            y: cgRect.minY + 16,
-            width: max(0, cgRect.width - 8),
-            height: 12
-        )
-        palette.sizeString(ByteFormattingShort.bytes(tile.effectiveBytes)).draw(
-            with: sizeRect,
-            options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
-            context: nil
-        )
+        if let sizeRect = layout.sizeRect {
+            let text = ByteFormattingShort.bytes(tile.effectiveBytes)
+            let attributed = palette.sizeString(text)
+            if layout.sizeIsInline {
+                let paragraph = NSMutableParagraphStyle()
+                paragraph.alignment = .right
+                paragraph.lineBreakMode = .byTruncatingTail
+                let aligned = NSMutableAttributedString(attributedString: attributed)
+                aligned.addAttribute(
+                    .paragraphStyle,
+                    value: paragraph,
+                    range: NSRange(location: 0, length: aligned.length)
+                )
+                aligned.draw(
+                    with: Self.cgRect(sizeRect),
+                    options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
+                    context: nil
+                )
+            } else {
+                attributed.draw(
+                    with: Self.cgRect(sizeRect),
+                    options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
+                    context: nil
+                )
+            }
+        }
+        context.restoreGState()
+    }
+
+    private static func cgRect(_ rect: TreemapRect) -> CGRect {
+        CGRect(x: rect.x, y: rect.y, width: max(0, rect.width), height: max(0, rect.height))
     }
 
     /// Pre-resolved colors and fonts for one appearance, built once per render.
     final class ResolvedPalette {
         let background: CGColor
-        let header: CGColor
         let accent = TreemapPalette.accent.cgColor
         let hover: CGColor
         private var fills: [CGColor] = []
         private var strokes: [CGColor] = []
+        private var headers: [CGColor] = []
 
-        private let nameFont = NSFont.systemFont(ofSize: 11)
-        private let sizeFont = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .regular)
+        private let nameFont = NSFont.systemFont(ofSize: 13, weight: .medium)
+        private let sizeFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         private var nameAttributes: [NSAttributedString.Key: Any] = [:]
         private var sizeAttributes: [NSAttributedString.Key: Any] = [:]
 
         init(appearance: TreemapAppearance) {
             background = TreemapPalette.background(appearance).cgColor
-            header = TreemapPalette.stroke(
-                paletteIndex: 0,
-                depth: 1,
-                isOther: false,
-                appearance: appearance
-            ).blended(with: TreemapColor(1, 1, 1, 0), fraction: 0.4).cgColor
             hover = (appearance == .light
                 ? TreemapColor(0, 0, 0, 0.07)
                 : TreemapColor(1, 1, 1, 0.10)).cgColor
@@ -380,15 +476,28 @@ public struct TreemapRenderer: Sendable {
                         paletteIndex: 0, depth: depth, isOther: true, appearance: appearance
                     ).cgColor
                 )
+                for index in 0..<count {
+                    headers.append(
+                        TreemapPalette.header(
+                            paletteIndex: index, depth: depth, isOther: false, appearance: appearance
+                        ).cgColor
+                    )
+                }
+                headers.append(
+                    TreemapPalette.header(
+                        paletteIndex: 0, depth: depth, isOther: true, appearance: appearance
+                    ).cgColor
+                )
             }
 
-            let textColor = TreemapPalette.text(appearance).nsColor
-            let sizeTextColor = TreemapPalette.text(appearance).blended(
-                with: TreemapColor(0.5, 0.5, 0.5),
-                fraction: 0.35
-            ).nsColor
-            nameAttributes = [.font: nameFont, .foregroundColor: textColor]
-            sizeAttributes = [.font: sizeFont, .foregroundColor: sizeTextColor]
+            nameAttributes = [
+                .font: nameFont,
+                .foregroundColor: TreemapPalette.text(appearance).nsColor
+            ]
+            sizeAttributes = [
+                .font: sizeFont,
+                .foregroundColor: TreemapPalette.secondaryText(appearance).nsColor
+            ]
         }
 
         /// `slot` is `0..<6` for palette groups and `6` for "other".
@@ -398,6 +507,19 @@ public struct TreemapRenderer: Sendable {
 
         func stroke(slot: Int, depthIndex: Int) -> CGColor {
             strokes[depthIndex * TreemapRenderer.slotsPerDepth + slot]
+        }
+
+        func header(slot: Int, depthIndex: Int) -> CGColor {
+            headers[depthIndex * TreemapRenderer.slotsPerDepth + slot]
+        }
+
+        /// Text layout for a tile. Expanded directories keep their title inside
+        /// the reserved header; leaves use the whole tile.
+        func textLayout(for tile: TreemapRenderTile) -> TreemapTileChrome.TextLayout? {
+            TreemapTileChrome.textLayout(
+                tileRect: tile.rect,
+                isExpanded: tile.contentRect != nil
+            )
         }
 
         func nameString(_ value: String) -> NSAttributedString {

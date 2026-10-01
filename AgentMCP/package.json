@@ -1,0 +1,28 @@
+{
+  "name": "spacejudge-agent-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Local stdio MCP adapter for the SpaceJudge agent CLI",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "npm run build",
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "bench:local": "node scripts/bench-local.mjs"
+  },
+  "dependencies": {
+    "@agentclientprotocol/codex-acp": "2.1.0",
+    "@modelcontextprotocol/server": "2.1.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.1.0",
+    "@types/node": "22.10.5",
+    "typescript": "5.7.3"
+  }
+}

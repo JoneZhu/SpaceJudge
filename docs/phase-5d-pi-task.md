@@ -6,7 +6,7 @@
 
 ## 工作位置与分工
 
-- 工作位置：`/Users/hongdazhu/Documents/ChatGPT/SpaceJudge`
+- 工作位置：`/Users/example/Documents/ChatGPT/SpaceJudge`
 - 分支：当前 `master` 工作树；仓库尚无 commit，所有现有文件都属于用户成果。
 - Pi 负责代码、资源、脚本、自动测试、普通修复与交付报告。
 - Codex 已完成设计，负责独立 code review、复测、真实 App/DMG 验收、反馈与最终文档状态。

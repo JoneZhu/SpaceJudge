@@ -323,6 +323,10 @@ expect_pass "single main executable accepted" sj_check_macho_inventory "$MACHO_A
 printf '\xcf\xfa\xed\xfe' > "$MACHO_APP/Contents/Frameworks/Evil.dylib"
 expect_fail "unknown nested Mach-O rejected" sj_check_macho_inventory "$MACHO_APP" "MachO"
 rm -f "$MACHO_APP/Contents/Frameworks/Evil.dylib"
+mkdir -p "$MACHO_APP/Contents/Helpers"
+printf '\xcf\xfa\xed\xfe' > "$MACHO_APP/Contents/Helpers/spacejudge-agent-cli"
+expect_fail "allow-listed CLI still rejects unsigned nested code" sj_check_macho_inventory "$MACHO_APP" "MachO"
+rm -f "$MACHO_APP/Contents/Helpers/spacejudge-agent-cli"
 
 # ---------------------------------------------------------------------------
 # 10. DMG layout

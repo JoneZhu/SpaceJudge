@@ -217,3 +217,58 @@ Phase 5D-A 只验收不需要发布凭据的部分；正式签名、公证、sta
 ### 9.4 5D-B 待凭据项
 
 Developer ID 签名链、notarization Accepted、staple、Gatekeeper、浏览器 quarantine、离线打开、Intel/Apple Silicon 实机矩阵与覆盖安装仍必须等 Developer ID Application、Keychain notary profile 和干净 commit 到位后由 5D-B 验收。
+
+## 10. Phase 6 本地 CLI 与 stdio MCP（Accepted）
+
+状态：Pi 实现与自测完成，Codex 已在 Swift 6.3.3 与仓库最低 Node 20.16.0 上独立验收，Phase 6 为 `Accepted`。设计入口见 [Phase 6 设计](24-phase-6-design.md)、[ADR-0011](adr/0011-local-cli-stdio-mcp.md)，接入说明见 [本地 Agent MCP runbook](runbooks/local-agent-mcp.md)，独立证据见 [Phase 6 验收基线](25-phase-6-baseline.md)，Pi 自测记录见 [Phase 6 Pi 报告](phase-6-pi-report.md)。
+
+### 10.1 Swift CLI（6A）
+
+Codex 已独立复跑并通过：
+
+- 全量 `swift test` 回归，以及 `SpaceJudgeAgentCLITests` 的新增用例；
+- `volume/status/children/issues` 的 JSON schema、UInt64 十进制字符串、`null` unknown、排序与分页边界；
+- 真实 fixture 扫描到 persisted `completed`；
+- 真进程 `SIGINT` 到 persisted `cancelled`（不得只测内存取消）；
+- 无效 root/scan/node、缺库、坏 UUID、库已存在、数据库不在 workspace 内/为嵌套路径的错误码与退出码；
+- 既有 `0755` workspace 被拒且目录模式保持不变（不得静默 chmod）；
+- 注入式 post-start 失败只产生唯一持久化 `failed` 终态，且不追加进程级 `error`；
+- 不可确认的失败（`fail` 写不进、`scanState` 仍为 running）只产生 `error/INTERNAL`，不得发布未持久化的 `failed` 终态；
+- 所有命令的 stdout/stderr 与错误 JSON 中的绝对路径、用户名、文件名泄漏扫描。
+
+### 10.2 TypeScript MCP（6B）
+
+Codex 已独立复跑并通过：
+
+- `npm ci && npm run build && npm test`；
+- 官方 `@modelcontextprotocol/client` 通过 stdio 完成 initialize、读取 instructions、`tools/list` 与八个工具端到端；第八个 `get_hotspots` 的独立验收见 [Agent 全局热点查询基线](32-phase-6-hotspots-baseline.md)；
+- `additionalProperties=false`、枚举、长度、`limit` 上限的 schema 拒绝；未知 `rootId`/`scanId`/`nodeId`；
+- 并发 `start_scan` 冲突、幂等 `cancel_scan`、终态后新扫描可启动且旧 `scanId` 变 `NOT_FOUND`；
+- 超过 64 个唯一授权根在启动时被拒绝，`list_allowed_roots` 输出不越界；
+- stdout 超长行 fail-closed：扫描标为 `INTERNAL`、精确 PID 被终止、后续行不被接受；
+- native 事件状态机 fail-closed：terminal-before-start、重复 `started`、started 前 `progress`、畸形 `progress`、scanId 不匹配、重复 terminal、started 后 `error` 均不得成功；
+- 输出 schema 必须带 UUID/UInt64 pattern、`additionalProperties=false`、阵列上限与可空分支，与 `structuredContent` 一致；
+- 连续 10 次扫描后无孤儿进程、任务目录有界、`shutdown` 后实例 task root 不存在；
+- **真实 stdio 生命周期**：官方 client 完成/取消扫描后 `client.close()`（stdin EOF）或 SIGTERM，server 进程退出且测试 TMPDIR 下不新增 `spacejudge-mcp-*` 任务根；不得只依赖直接 `JobManager.shutdown()`；
+- 带提示词式文件名的端到端用例：名称只出现在 `list_children.structuredContent`，不进入文本摘要、错误或 stderr；
+- 对所有协议输出、错误和日志执行绝对路径与用户名泄漏扫描。
+
+### 10.3 性能与资源门
+
+- 适配器稳定态 RSS 目标 < 150 MiB；
+- `list_children` 额外延迟 P95 < 100 ms（本地热缓存，排除首次进程启动）；
+- 上述数据可由 `cd AgentMCP && npm run bench:local` 在自建自清 fixture 上复现；`passed` 需同时满足 `terminalStatus === 'completed'`、RSS < 150 MiB、P95 < 100 ms、无新增 `spacejudge-mcp-*` 任务根；这些是工程验收目标，不是跨机器营销承诺。Codex 在 Node 20.16.0 上复测得到 20,000 entries、scan 164 ms、RSS 95.7 MiB、查询 P95 30.55 ms、`leakedTaskRoots: []`。
+
+### 10.4 大目录 event revision 可靠性修复（Accepted）
+
+2026-09-28 的真实整机扫描发现，多 worker 在一槽 event buffer 满时会因 actor 重入乱序发布 batch revision。修复与回归必须永久保留：
+
+- 4 workers、`eventBufferSize = 1`、多子目录、慢消费者；revision 必须精确为 `1...N`，name 在首次引用前可见，terminal 唯一且最后；
+- 满 buffer 时 cancel 必须在 2 秒内形成唯一 `cancelled` terminal，FD、spool 和 diagnostics 回收；
+- 真实 engine + runner + SQLite 在并发背压下完成，随后用只读连接重开并核对 last revision、根 aggregate、根 children 和计数；
+- targeted 压力测试至少连续 20 轮；全量 Swift 与 Node/MCP 回归通过；
+- SQLite revision 连续性校验不得放宽，stream 不得改为无界，worker 不得固定为 1 来规避竞态。
+
+Codex 真实验收已经覆盖 676 万节点主目录与 840 万节点 `/`，均 `completed` 且根可查询。详细证据见 [Phase 6 大目录事件顺序修复验收基线](28-phase-6-scale-fix-baseline.md)。
+
+剩余资源门：超大扫描峰值 RSS 约 1.06–1.29 GB，未满足百万节点 < 250 MB 的原目标；后续内存优化不得以牺牲本节的 FIFO、快照一致性或 hard-link 归属正确性换取。

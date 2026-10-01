@@ -15,13 +15,15 @@ let package = Package(
         .library(name: "SpaceJudgeTreemapUI", targets: ["SpaceJudgeTreemapUI"]),
         .library(name: "SpaceJudgeAppSupport", targets: ["SpaceJudgeAppSupport"]),
         .library(name: "SpaceJudgeBenchSupport", targets: ["SpaceJudgeBenchSupport"]),
+        .library(name: "SpaceJudgeAgentCLIKit", targets: ["SpaceJudgeAgentCLIKit"]),
         .executable(name: "spacejudge-core-smoke", targets: ["SpaceJudgeCoreSmoke"]),
         .executable(name: "spacejudge-scan-smoke", targets: ["SpaceJudgeScanSmoke"]),
         .executable(name: "spacejudge-persist-smoke", targets: ["SpaceJudgePersistSmoke"]),
         .executable(name: "spacejudge-store-bench", targets: ["SpaceJudgeStoreBench"]),
         .executable(name: "spacejudge-treemap-bench", targets: ["SpaceJudgeTreemapBench"]),
         .executable(name: "spacejudge-e2e-bench", targets: ["SpaceJudgeE2EBench"]),
-        .executable(name: "spacejudge-volume-plan", targets: ["SpaceJudgeVolumePlan"])
+        .executable(name: "spacejudge-volume-plan", targets: ["SpaceJudgeVolumePlan"]),
+        .executable(name: "spacejudge-agent-cli", targets: ["SpaceJudgeAgentCLI"])
     ],
     targets: [
         .target(
@@ -89,6 +91,17 @@ let package = Package(
                 "SpaceJudgeAppSupport", "SpaceJudgeDomain", "SpaceJudgeScan"
             ]
         ),
+        .target(
+            name: "SpaceJudgeAgentCLIKit",
+            dependencies: [
+                "SpaceJudgeAppSupport", "SpaceJudgeDomain", "SpaceJudgeScan",
+                "SpaceJudgeStore", "SpaceJudgeUseCases"
+            ]
+        ),
+        .executableTarget(
+            name: "SpaceJudgeAgentCLI",
+            dependencies: ["SpaceJudgeAgentCLIKit"]
+        ),
         .executableTarget(
             name: "SpaceJudgeE2EBench",
             dependencies: ["SpaceJudgeBenchSupport"]
@@ -146,6 +159,13 @@ let package = Package(
             name: "SpaceJudgeVolumePlanTests",
             dependencies: [
                 "SpaceJudgeVolumePlanKit", "SpaceJudgeDomain", "SpaceJudgeAppSupport"
+            ]
+        ),
+        .testTarget(
+            name: "SpaceJudgeAgentCLITests",
+            dependencies: [
+                "SpaceJudgeAgentCLIKit", "SpaceJudgeDomain", "SpaceJudgeScan",
+                "SpaceJudgeStore", "SpaceJudgeAppSupport", "SpaceJudgeUseCases"
             ]
         )
     ]

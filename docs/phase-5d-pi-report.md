@@ -2,7 +2,7 @@
 
 状态：Pi 实施与自测完成，Codex 已独立验收 5D-A；未进入 5D-B，未签名、未公证、未发布。最终结论见 [Phase 5D-A 验收基线](23-phase-5d-a-baseline.md)。
 日期：2026-09-27
-工作位置：`/Users/hongdazhu/Documents/ChatGPT/SpaceJudge`（`master` 工作树，无 HEAD，全部未跟踪）
+工作位置：`/Users/example/Documents/ChatGPT/SpaceJudge`（`master` 工作树，无 HEAD，全部未跟踪）
 任务依据：[Phase 5D-A 任务单](phase-5d-pi-task.md)、[Phase 5D 设计](22-phase-5d-design.md)、[ADR-0010](adr/0010-developer-id-dmg-release.md)
 原始证据目录：`/tmp/spacejudge-phase5d-pi.bdI8JK/evidence`
 原始日志目录：`/tmp/spacejudge-phase5d-pi.bdI8JK/logs`

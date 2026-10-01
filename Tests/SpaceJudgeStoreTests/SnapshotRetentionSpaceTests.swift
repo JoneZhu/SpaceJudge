@@ -30,6 +30,48 @@ final class MutableCapacityProvider: StorageCapacityProviding, @unchecked Sendab
 
 @Suite("Snapshot retention and space gates", .serialized)
 struct SnapshotRetentionSpaceTests {
+    @Test("GUI refresh retains its displayed snapshot across retries, bounded to two scans")
+    func refreshRetention() async throws {
+        let database = try TempDatabase()
+        let repository = try SQLiteSnapshotRepository(path: database.path, maximumRetainedScans: 2)
+        let first = sampleScanID(71), second = sampleScanID(72), third = sampleScanID(73)
+        try await repository.begin(sampleMetadata(scanID: first))
+        try await writeMinimal(repository, scanID: first)
+        await repository.retainForRefresh(first)
+        try await repository.begin(sampleMetadata(scanID: second))
+        #expect(try await repository.scanState(first) != nil)
+        try await repository.begin(sampleMetadata(scanID: third))
+        #expect(try await repository.scanState(first) != nil)
+        #expect(try await repository.scanState(second) == nil)
+        #expect(try await repository.scanState(third) != nil)
+        // Changing the chosen location clears refresh retention.
+        await repository.retainForRefresh(nil)
+        try await repository.begin(sampleMetadata(scanID: sampleScanID(74)))
+        #expect(try await repository.scanState(first) == nil)
+        #expect(try await repository.scanState(third) == nil)
+        await repository.close()
+    }
+
+    @Test("Exact-name lookup reaches small items beyond the top 500, preserving raw bytes")
+    func exactNameLookup() async throws {
+        let database = try TempDatabase()
+        let repository = try database.open()
+        let scan = sampleScanID(75)
+        try await repository.begin(sampleMetadata(scanID: scan))
+        let rawName = Data([0xff, 0xfe, 0x61])
+        var names = [sampleName(1, "root")]
+        var nodes = [sampleNode(id: 1, parent: nil, name: 1, scanID: scan, kind: .directory, attributed: 0)]
+        for id: UInt64 in 2...602 {
+            names.append(id == 602 ? NameRecord(id: NameID(id), utf8: rawName) : sampleName(id, "item-\(id)"))
+            nodes.append(sampleNode(id: id, parent: 1, name: id, scanID: scan, attributed: id == 602 ? 1 : 100))
+        }
+        try await repository.write(NodeBatch(scanID: scan, revision: Revision(1), names: names, nodes: nodes))
+        let page = try await repository.childPage(of: NodeID(1), in: scan, limit: 500)
+        #expect(!page.items.contains { $0.node.id == NodeID(602) })
+        #expect(try await repository.child(named: rawName, of: NodeID(1), in: scan)?.id == NodeID(602))
+        #expect(try await repository.child(named: Data("absent".utf8), of: NodeID(1), in: scan) == nil)
+        await repository.close()
+    }
     private func writeMinimal(
         _ repository: SQLiteSnapshotRepository,
         scanID: ScanID,
@@ -374,5 +416,73 @@ struct SnapshotRetentionSpaceTests {
             StorageSpaceMath.decide(volumeAvailable: 0, reusableBytes: 4, requiredBytes: 5)
                 == .insufficient(requiredBytes: 5, availableBytes: 4)
         )
+    }
+
+    // MARK: Production capacity provider
+
+    @Test("The production provider reports the same capacity as the Foundation facts resolver")
+    func productionProviderMatchesFoundationFacts() {
+        let directory = NSTemporaryDirectory()
+        let provider = VolumeStorageCapacityProvider(directoryPath: directory)
+        let providerValue = provider.availableForImportantUsageBytes()
+        let foundation = FoundationVolumeFactsProvider().facts(forFileSystemPath: directory)
+        #expect(providerValue != nil)
+        // Both use the same resolution rules; the raw numbers can differ by a
+        // few blocks because the two samples happen at slightly different
+        // times, so compare with a small tolerance instead of exact equality.
+        if let providerValue, let resolved = foundation.availableCapacityBytes {
+            let difference = providerValue > resolved
+                ? providerValue - resolved
+                : resolved - providerValue
+            #expect(difference < 64 * 1024 * 1024)
+        }
+    }
+
+    @Test("A provider for a missing path stays unknown instead of borrowing an ancestor's capacity")
+    func productionProviderMissingPath() {
+        let provider = VolumeStorageCapacityProvider(
+            directoryPath: "/spacejudge-nonexistent-\(UUID().uuidString)"
+        )
+        #expect(provider.availableForImportantUsageBytes() == nil)
+    }
+
+    @Test("The gate provider falls back to statfs when the Foundation lookup fails")
+    func providerFallsBackWhenLookupThrows() {
+        let provider = VolumeStorageCapacityProvider(
+            directoryPath: "/existing",
+            lookup: { _ in nil },
+            probe: { _ in 3_000 }
+        )
+        #expect(provider.availableForImportantUsageBytes() == 3_000)
+    }
+
+    @Test("The gate provider rejects important > total like the resolver")
+    func providerRejectsImpossibleImportant() {
+        let provider = VolumeStorageCapacityProvider(
+            directoryPath: "/existing",
+            lookup: { _ in RawVolumeValues(total: 100, important: 500, standard: 500) },
+            probe: { _ in nil }
+        )
+        #expect(provider.availableForImportantUsageBytes() == nil)
+    }
+
+    @Test("The gate provider keeps all-zero as a confirmed zero")
+    func providerAllZero() {
+        let provider = VolumeStorageCapacityProvider(
+            directoryPath: "/existing",
+            lookup: { _ in RawVolumeValues(total: 100, important: 0, standard: 0) },
+            probe: { _ in 0 }
+        )
+        #expect(provider.availableForImportantUsageBytes() == 0)
+    }
+
+    @Test("The gate provider uses the probe for an anomalous zero important value")
+    func providerZeroImportantUsesProbe() {
+        let provider = VolumeStorageCapacityProvider(
+            directoryPath: "/existing",
+            lookup: { _ in RawVolumeValues(total: 1_000, important: 0, standard: nil) },
+            probe: { _ in 512 }
+        )
+        #expect(provider.availableForImportantUsageBytes() == 512)
     }
 }

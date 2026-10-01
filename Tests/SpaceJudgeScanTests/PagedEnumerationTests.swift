@@ -316,7 +316,7 @@ struct PagedEnumerationTests {
         for index in 0..<16 {
             try fixture.file("f\(index)", contents: "x")
         }
-        let baseline = openFileDescriptorCount()
+        let baseline = settledFileDescriptorCount()
         for _ in 0..<50 {
             let descriptor = openDirectory(fixture.url.path)
             let cursor = try ReferenceEnumerator(pageEntryLimit: 4)
@@ -326,7 +326,7 @@ struct PagedEnumerationTests {
             descriptor.close()
             // Cursor dropped here; its duplicate descriptor must be closed.
         }
-        let after = openFileDescriptorCount()
+        let after = settledFileDescriptorCount()
         #expect(after <= baseline + 4, "baseline=\(baseline) after=\(after)")
     }
 }

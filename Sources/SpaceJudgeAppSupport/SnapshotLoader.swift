@@ -13,6 +13,10 @@ public struct SnapshotLoader: Sendable {
         self.repository = repository
     }
 
+    public func child(named bytes: Data, parent: NodeID, scanID: ScanID) async throws -> NodeRecord? {
+        try await repository.child(named: bytes, of: parent, in: scanID)
+    }
+
     /// Loads at most `limit` direct children of `nodeID` plus the direct-child
     /// total. Throws `SnapshotQueryError.invalidChildPageLimit` for limits
     /// outside `1...500`.

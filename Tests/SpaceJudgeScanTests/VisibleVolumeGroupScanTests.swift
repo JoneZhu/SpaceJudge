@@ -13,8 +13,16 @@ private final class InodeScriptedEnumerator: DirectoryEnumerator, @unchecked Sen
     private var scriptsByRelativePath: [String: [RawDirectoryEntry]]
     private var inodeToPath: [UInt64: String]
     private var usedPaths: [String] = []
+    /// A directory whose cursor never reports `isLast`, so a cancel test can
+    /// keep the scan open deterministically instead of racing completion.
+    private let nonCompletingPath: String?
 
-    init(rootPath: String, scriptsByRelativePath: [String: [RawDirectoryEntry]]) throws {
+    init(
+        rootPath: String,
+        scriptsByRelativePath: [String: [RawDirectoryEntry]],
+        nonCompletingPath: String? = nil
+    ) throws {
+        self.nonCompletingPath = nonCompletingPath
         self.scriptsByRelativePath = scriptsByRelativePath
         var inodeToPath: [UInt64: String] = [:]
         for relative in scriptsByRelativePath.keys {
@@ -42,7 +50,11 @@ private final class InodeScriptedEnumerator: DirectoryEnumerator, @unchecked Sen
         let relative = inodeToPath[UInt64(status.st_ino)]
         if let relative { usedPaths.append(relative) }
         let entries = relative.flatMap { scriptsByRelativePath[$0] } ?? []
+        let isNonCompleting = relative == nonCompletingPath
         lock.unlock()
+        if isNonCompleting {
+            return NeverEndingCursor(entries)
+        }
         return ScriptedCursor(.entries(entries))
     }
 
@@ -50,6 +62,23 @@ private final class InodeScriptedEnumerator: DirectoryEnumerator, @unchecked Sen
         lock.lock()
         defer { lock.unlock() }
         return usedPaths
+    }
+}
+
+/// Emits one non-final page then never finishes, so the owning worker keeps
+/// yielding to cancellation instead of letting the scan complete first.
+private final class NeverEndingCursor: DirectoryCursor {
+    private var pending: [RawDirectoryEntry]?
+
+    init(_ entries: [RawDirectoryEntry]) { pending = entries }
+
+    func nextPage() throws -> DirectoryEntryPage {
+        if let pending {
+            self.pending = nil
+            return DirectoryEntryPage(entries: pending, isLast: false)
+        }
+        usleep(5_000)
+        return DirectoryEntryPage(entries: [], isLast: false)
     }
 }
 
@@ -84,7 +113,9 @@ struct VisibleVolumeGroupScanTests {
         )
     }
 
-    private func makeFixture() throws -> (TempFixture, InodeScriptedEnumerator) {
+    private func makeFixture(
+        nonCompletingPath: String? = nil
+    ) throws -> (TempFixture, InodeScriptedEnumerator) {
         let fixture = try TempFixture(prefix: "spacejudge-volume-group")
         try fixture.directory("Applications/AppA")
         try fixture.directory("Users/user")
@@ -122,7 +153,8 @@ struct VisibleVolumeGroupScanTests {
         ]
         let enumerator = try InodeScriptedEnumerator(
             rootPath: fixture.url.path,
-            scriptsByRelativePath: scripts
+            scriptsByRelativePath: scripts,
+            nonCompletingPath: nonCompletingPath
         )
         return (fixture, enumerator)
     }
@@ -188,7 +220,9 @@ struct VisibleVolumeGroupScanTests {
 
     @Test("Cancelling the synthetic tree yields one cancelled terminal")
     func syntheticCancel() async throws {
-        let (fixture, enumerator) = try makeFixture()
+        // `System` never finishes its own enumeration, so the scan cannot
+        // complete before `collectScan` processes the first batch and cancels.
+        let (fixture, enumerator) = try makeFixture(nonCompletingPath: "System")
         let engine = FileSystemScanEngine(
             configuration: ScanConfiguration(
                 enumerator: enumerator,

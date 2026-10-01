@@ -25,7 +25,7 @@ public struct StorageSpacePolicy: Sendable, Equatable {
     public static let standard = StorageSpacePolicy()
 }
 
-/// Supplies the cache volume's available-for-important-usage bytes.
+/// Supplies the cache volume's effective available bytes.
 ///
 /// Injectable so low-space behavior is testable without touching a real
 /// machine. `nil` means the fact could not be established; it must never be
@@ -34,8 +34,11 @@ public protocol StorageCapacityProviding: Sendable {
     func availableForImportantUsageBytes() -> UInt64?
 }
 
-/// Production provider backed only by the public Foundation volume key for the
-/// directory that holds the database.
+/// Production provider backed by the same resolution rules as
+/// `FoundationVolumeFactsProvider`: a positive important-usage value wins, then
+/// Foundation's standard availability, then a Darwin `statfs` sample. A
+/// contradictory zero from one Foundation key therefore cannot fail the gate
+/// while another source still reports free space.
 ///
 /// The runtime gate asks for the fact before every committed batch, but the
 /// Foundation volume query is comparatively allocation-heavy. A short
@@ -44,14 +47,26 @@ public protocol StorageCapacityProviding: Sendable {
 /// cache is only in this production provider; injected test providers stay
 /// immediate and uncached.
 public final class VolumeStorageCapacityProvider: StorageCapacityProviding, @unchecked Sendable {
+    public typealias RawLookup = @Sendable (String) -> RawVolumeValues?
+    public typealias Probe = @Sendable (String) -> UInt64?
+
     private let directoryPath: String
     private let ttlSeconds: Double
+    private let lookup: RawLookup
+    private let probe: Probe
     private let lock = NSLock()
     private var cached: (value: UInt64?, at: ContinuousClock.Instant)?
 
-    public init(directoryPath: String, ttlSeconds: Double = 2) {
+    public init(
+        directoryPath: String,
+        ttlSeconds: Double = 2,
+        lookup: @escaping RawLookup = FoundationVolumeFactsProvider.foundationLookup,
+        probe: @escaping Probe = FileSystemCapacityProbe.availableBytes
+    ) {
         self.directoryPath = directoryPath
         self.ttlSeconds = max(0, ttlSeconds)
+        self.lookup = lookup
+        self.probe = probe
     }
 
     public func availableForImportantUsageBytes() -> UInt64? {
@@ -72,16 +87,16 @@ public final class VolumeStorageCapacityProvider: StorageCapacityProviding, @unc
     }
 
     private func read() -> UInt64? {
-        let url = URL(fileURLWithPath: directoryPath, isDirectory: true)
-        guard let values = try? url.resourceValues(
-            forKeys: [.volumeAvailableCapacityForImportantUsageKey]
-        ) else {
-            return nil
-        }
-        guard let available = values.volumeAvailableCapacityForImportantUsage else {
-            return nil
-        }
-        return available >= 0 ? UInt64(available) : nil
+        let values = lookup(directoryPath)
+        // The same resolver the app uses applies the `available > total`
+        // validity rule to every source, including a positive important-usage
+        // value, so the gate can never accept an impossible number.
+        return VolumeCapacityResolver.facts(
+            total: values?.total,
+            availableForImportantUsage: values?.important,
+            standardAvailable: values?.standard,
+            fileSystemAvailable: probe(directoryPath)
+        ).availableCapacityBytes
     }
 }
 

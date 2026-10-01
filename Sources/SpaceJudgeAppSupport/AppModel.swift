@@ -45,6 +45,13 @@ public final class AppModel {
     /// Immutable plan backing the current or last scan. Read-only; exposes the
     /// chosen `kind` for tests and future UI without persisting any path.
     public private(set) var volumePlan: VolumeScanPlan?
+    /// Background full-range refresh; the canvas still describes the old scan.
+    public private(set) var isRefreshing = false
+    public private(set) var refreshMessage: String?
+    private var isReplacingSnapshot = false
+    private var refreshMetadata: ScanMetadata?
+    private var refreshRevision: Revision?
+    private var refreshBackup: (phase: AppPhase, progress: ScanProgress?)?
 
     // MARK: Treemap navigation state
 
@@ -74,6 +81,10 @@ public final class AppModel {
     public private(set) var sceneError: String?
     /// In-place expanded directories, in interaction order.
     public private(set) var expandedNodeIDs: [NodeID] = []
+    /// Directories whose automatic preview the user explicitly collapsed. They
+    /// stay collapsed across scan refreshes until the focus changes or the user
+    /// expands them again.
+    public private(set) var suppressedPreviewNodeIDs: [NodeID] = []
     /// Monotonic expansion-set version used to reject stale layouts.
     public private(set) var expansionVersion = 0
     /// Path-free explanation when reveal-in-Finder cannot locate the item.
@@ -87,6 +98,11 @@ public final class AppModel {
     public let expandedPageLimit = 200
     /// Maximum number of simultaneously expanded directories.
     public let maximumExpandedCount = 8
+    /// Maximum number of directories auto-previewed to show a shallow nesting
+    /// by default without any user action.
+    public let previewExpandedLimit = 6
+    /// Maximum direct children loaded for one auto-previewed directory.
+    public let previewPageLimit = 80
 
     // MARK: Dependencies
 
@@ -129,6 +145,13 @@ public final class AppModel {
     private var activeSceneToken: SceneQueryToken?
     private var lastSceneRefreshAt: ContinuousClock.Instant?
     private var selectionToken = 0
+    /// Single-flight, latest-wins refresh state for the selected directory's
+    /// aggregate. Deliberately separate from `selectionToken`: an automatic
+    /// detail refresh must never invalidate an in-flight Finder request for the
+    /// same user selection.
+    private var aggregateQueryTask: Task<Void, Never>?
+    private var aggregateQueryGeneration = 0
+    private var aggregateQueryPending = false
 
     // MARK: Init
 
@@ -164,8 +187,144 @@ public final class AppModel {
     /// Whether a scan task is currently active.
     public var isScanning: Bool { phase.isActive }
 
+    /// A synthetic “other” tile is not an actionable scope. Analysis uses the
+    /// actual selected node, or the current focus when nothing is selected.
+    public var canAnalyzeWithAgent: Bool {
+        isTerminal && !isRefreshing && !isSceneStale && selectedOther == nil
+            && scanID != nil && currentNodeID != nil
+    }
+
+    public func captureAgentAnalysis(nodeID requestedNodeID: NodeID? = nil) async throws -> AgentAnalysisSnapshot {
+        guard canAnalyzeWithAgent, let scan = scanID,
+              let node = requestedNodeID ?? selectedNodeID ?? currentNodeID else {
+            throw AgentAnalysisSnapshot.CaptureError.unstableSnapshot
+        }
+        let focus = currentNodeID
+        let snapshot = try await AgentAnalysisSnapshot.capture(loader: loader, scanID: scan, nodeID: node)
+        guard canAnalyzeWithAgent, scanID == scan, currentNodeID == focus,
+              requestedNodeID != nil || (selectedNodeID ?? currentNodeID) == node else {
+            throw AgentAnalysisSnapshot.CaptureError.unstableSnapshot
+        }
+        return snapshot
+    }
+
+    public func captureCleanupHandoff(nodeID: NodeID) async throws
+        -> (snapshot: AgentAnalysisSnapshot, context: CodexCleanupContext) {
+        guard let scan = scanID, let root = rootNodeID, let selectedRoot = selection else {
+            throw AgentAnalysisSnapshot.CaptureError.missingScope
+        }
+        let focus = currentNodeID
+        let snapshot = try await captureAgentAnalysis(nodeID: nodeID)
+        let context = try await CodexCleanupContext.capture(loader: loader, scanID: scan,
+            nodeID: nodeID, rootNodeID: root, rootPath: selectedRoot.fileSystemPath,
+            snapshot: snapshot, volume: volume)
+        guard canAnalyzeWithAgent, scanID == scan, currentNodeID == focus, selection == selectedRoot else {
+            throw AgentAnalysisSnapshot.CaptureError.unstableSnapshot
+        }
+        return (snapshot, context)
+    }
+
     /// One-line capacity summary; unknown values render as em dashes.
     public var capacityLine: String { ByteFormatting.capacityLine(volume) }
+
+    /// Attributed bytes for the *current focus* only, from its snapshot
+    /// aggregate. `nil` when the read has not provided an aggregate yet; this
+    /// must never fall back to the whole-scan root total.
+    public var focusAttributedBytes: UInt64? {
+        guard !isSceneStale else { return nil }
+        return treemapScene?.focusAggregate?.attributedBytes
+    }
+
+    /// Whether the current focus aggregate is still being built.
+    public var focusAggregateIsComplete: Bool? {
+        guard !isSceneStale else { return nil }
+        return treemapScene?.focusAggregate?.isComplete
+    }
+
+    /// Compact "current location" size line. Unknown is an em dash, never a 0,
+    /// and an incomplete aggregate is marked with the shared active/terminal
+    /// wording (never "still counting" after a cancel or failure).
+    public var focusSizeLine: String {
+        let complete = focusAggregateIsComplete
+        let suffix = complete == false
+            ? progressWording.incompleteSuffix(isComplete: false)
+            : ""
+        return "当前位置 \(ByteFormatting.bytes(focusAttributedBytes))\(suffix)"
+    }
+
+    /// Shared active/terminal progress wording.
+    public var progressWording: AppProgressWording {
+        AppProgressWording(phase: isRefreshing ? refreshBackup?.phase ?? phase : phase)
+    }
+
+    /// Root reconciliation for the whole scan, explicitly labelled so it is
+    /// never read as the current map's size.
+    public var scanScopeReconciliationLine: String? {
+        guard let attribution = attributionLine else { return nil }
+        return "扫描范围 · \(attribution)"
+    }
+
+    /// Testable, path-free presentation classification for the shell.
+    public var presentationState: AppPresentationState {
+        AppPresentationState.resolve(
+            phase: phase,
+            progress: progress,
+            scene: treemapScene,
+            sceneError: sceneError != nil,
+            attribution: bestKnownAttributedBytes,
+            isLoading: isSceneLoading,
+            sceneMatchesFocus: !isSceneStale
+        )
+    }
+
+    /// Whether a snapshot read for the current focus is in flight or queued.
+    public var isSceneLoading: Bool {
+        sceneRefreshInFlight || sceneRefreshPending
+            || sceneRefreshTask != nil || sceneQueryTask != nil
+    }
+
+    /// Whether the displayed map belongs to a different focus than the current
+    /// navigation path (an old map kept on screen while the new one loads).
+    public var isSceneStale: Bool {
+        if isReplacingSnapshot { return true }
+        guard let scene = treemapScene, let focus = currentNodeID else { return false }
+        return scene.focusNodeID != focus
+    }
+
+    /// Best-known attributed bytes for the current scope, from terminal facts
+    /// or in-flight progress, else `nil`.
+    public var bestKnownAttributedBytes: UInt64 {
+        switch scanAttribution {
+        case .terminal(let attributedBytes, _):
+            return attributedBytes
+        case .scanning(let attributedBytes):
+            return attributedBytes
+        case .none:
+            return 0
+        }
+    }
+
+    /// Compact capacity strip values and provenance label.
+    public var capacityPresentation: CapacityPresentation {
+        CapacityPresentation(volume: volume)
+    }
+
+    /// Shared enablement policy for the toolbar and the menu bar. Derived from
+    /// live state, so both surfaces stay in sync and the menu can observe it.
+    public var commandPolicy: AppCommandPolicy {
+        AppCommandPolicy(phase: phase, hasRoot: hasRoot, isShutDown: isShutDown)
+    }
+
+    /// Whether the choose-location action is currently allowed. Single source
+    /// of truth for the toolbar and the menu.
+    public var canChooseRoot: Bool { commandPolicy.canChooseRoot }
+
+    /// Whether the rescan action is currently allowed. Single source of truth
+    /// for the toolbar and the menu so `Command+R` cannot restart a live scan.
+    public var canRescan: Bool { commandPolicy.canRescan }
+
+    /// Whether the cancel action is currently allowed.
+    public var canCancel: Bool { commandPolicy.canCancel }
 
     /// Counting/rate line for the scanning state.
     public var progressLine: String { ByteFormatting.progressLine(progress) }
@@ -209,17 +368,34 @@ public final class AppModel {
 
     // MARK: User actions
 
+    /// Clears a path-free scan/startup error after the user acknowledges it.
+    /// The underlying phase is preserved so results stay browsable.
+    public func dismissUserError() {
+        userError = nil
+    }
+
+    /// Clears a reveal-in-Finder failure message.
+    public func dismissRevealError() {
+        revealError = nil
+    }
+
+    /// Retries the snapshot read after a scene error. The error text is kept
+    /// until a new read actually succeeds, so the UI never claims success early.
+    public func retrySceneLoad() {
+        scheduleSceneRefresh(force: true)
+    }
+
     /// Presents the open panel and, on success, adopts the selection and starts
     /// a scan. Cancelling the panel is not an error and restores the previous
     /// stable phase exactly.
-    public func chooseRoot() async {
+    public func chooseRoot(initialURL: URL? = nil) async {
         guard !isShutDown, !isChoosingRoot else { return }
         isChoosingRoot = true
         defer { isChoosingRoot = false }
         if isScanning { await cancelScan() }
         let previous = phase
         phase = .choosingRoot
-        let picked = await directoryAccess.pickDirectory()
+        let picked = await directoryAccess.pickDirectory(initialURL: initialURL)
         guard let picked else {
             // Restore the captured stable state, keeping e.g. `.failed` and its
             // path-free error, `.permissionLimited`, or `.cancelled` intact.
@@ -241,7 +417,9 @@ public final class AppModel {
 
     /// Re-runs the current selection.
     public func rescan() async {
-        await startScan()
+        guard canRescan, let selection else { return }
+        beginScan(selection: selection, plan: volumePlan ?? planner.plan(for: selection),
+                  preservingResults: scanID != nil && treemapScene != nil)
     }
 
     /// Requests engine cancellation and waits for the runner to settle,
@@ -281,8 +459,20 @@ public final class AppModel {
         beginScan(selection: selection, plan: plan)
     }
 
-    private func beginScan(selection: DirectorySelection, plan: VolumeScanPlan) {
-        resetScanState()
+    private func beginScan(selection: DirectorySelection, plan: VolumeScanPlan, preservingResults: Bool = false) {
+        let retainedID = preservingResults ? scanID : nil
+        if preservingResults {
+            stopSceneRefresh()
+            refreshBackup = (phase, progress)
+            isRefreshing = true
+            refreshMetadata = nil
+            refreshRevision = nil
+            progress = nil
+            userError = nil
+        } else {
+            resetScanState()
+        }
+        refreshMessage = nil
         volumePlan = plan
         refreshGeneration += 1
         phase = .preparing
@@ -292,8 +482,10 @@ public final class AppModel {
         let request = plan.makeScanRequest(workspaceExclusions: workspaceExclusions)
         let runner = PersistingScanRunner(engine: engine, repository: repository)
         let buffer = self.buffer
+        let repository = self.repository
         let task = Task.detached(priority: .userInitiated) { () throws -> ScanSummary in
-            try await runner.run(request) { update in
+            await repository.retainForRefresh(retainedID)
+            return try await runner.run(request) { update in
                 buffer.deliver(update)
             }
         }
@@ -307,7 +499,7 @@ public final class AppModel {
             }
             guard let self else { return }
             self.drain()
-            self.finishScan(result)
+            await self.finishScan(result)
         }
     }
 
@@ -315,10 +507,11 @@ public final class AppModel {
     /// security scope is intentionally left active so results remain usable.
     private func cancelAndWait() async {
         guard let runnerTask else { return }
-        if let scanID {
-            await engine.cancel(scanID: scanID)
+        let activeID = isRefreshing ? refreshMetadata?.scanID : scanID
+        if let activeID {
+            await engine.cancel(scanID: activeID)
         }
-        let engineCancelRequested = scanID != nil
+        let engineCancelRequested = activeID != nil
         if !engineCancelRequested {
             // Cancellation before `.started`: cancel the consumer so the
             // stream terminates and the coordinator releases its workers.
@@ -346,8 +539,15 @@ public final class AppModel {
         return true
     }
 
-    private func finishScan(_ result: Result<ScanSummary, any Error>) {
+    private func finishScan(_ result: Result<ScanSummary, any Error>) async {
         stopPump()
+        if isRefreshing {
+            await finishRefresh(result)
+            runnerTask = nil
+            scanTask = nil
+            scanFinished = true
+            return
+        }
         runnerTask = nil
         scanTask = nil
         switch result {
@@ -384,11 +584,146 @@ public final class AppModel {
         scanFinished = true
     }
 
+    private func finishRefresh(_ result: Result<ScanSummary, any Error>) async {
+        let backup = refreshBackup
+        defer {
+            isRefreshing = false
+            isReplacingSnapshot = false
+            refreshBackup = nil
+            refreshMetadata = nil
+            refreshRevision = nil
+        }
+        // An interrupted replacement must not destroy a previously complete map.
+        guard case .success(let newSummary) = result,
+              newSummary.status == .completed,
+              phase != .cancelling, !isShutDown,
+              let metadata = refreshMetadata, let oldScan = scanID else {
+            phase = backup?.phase ?? .completed
+            progress = backup?.progress
+            if case .failure(let error) = result, !(error is CancellationError) {
+                userError = AppUserError.classify(error)
+                refreshMessage = "刷新失败 · 已保留上次结果"
+            } else {
+                refreshMessage = "刷新已取消 · 已保留上次结果"
+            }
+            return
+        }
+        isReplacingSnapshot = true
+        stopSceneRefresh()
+        do {
+            // Capture the location at completion, not at refresh start: the
+            // user can keep browsing the retained snapshot while scanning.
+            let components = try await relativeNameBytes(scanID: oldScan, nodeID: currentNodeID)
+            let selectedComponents = try await relativeNameBytes(scanID: oldScan, nodeID: selectedNodeID)
+            var path = [SnapshotPathItem(nodeID: metadata.rootNodeID,
+                                         name: rootDisplayName ?? "", kind: .directory)]
+            var focus = metadata.rootNodeID
+            for bytes in components {
+                guard let child = try await sceneLoader.child(named: bytes, parent: focus, scanID: metadata.scanID),
+                      child.kind.isDirectoryLike else { break }
+                focus = child.id
+                path.append(SnapshotPathItem(nodeID: child.id,
+                                             name: String(decoding: bytes, as: UTF8.self), kind: child.kind))
+            }
+            let token = SceneQueryToken(generation: refreshGeneration, scanID: metadata.scanID,
+                focus: focus, expansionVersion: expansionVersion + 1,
+                expansionSet: [], suppressedPreview: [], isTerminal: true)
+            guard let scene = await Self.buildScene(loader: sceneLoader, token: token,
+                focusName: path.last?.name ?? "", focusKind: path.last?.kind ?? .directory,
+                rootDisplayName: rootDisplayName ?? "", previewLimit: previewExpandedLimit,
+                previewPageLimit: previewPageLimit) else { throw AppRefreshError.sceneUnavailable }
+            let limited = try await loader.isPermissionLimited(scanID: metadata.scanID)
+            var restoredSelection: NodeID?
+            if !selectedComponents.isEmpty {
+                var parent = metadata.rootNodeID
+                var found = true
+                for bytes in selectedComponents {
+                    guard let child = try await sceneLoader.child(named: bytes, parent: parent, scanID: metadata.scanID) else {
+                        found = false; break
+                    }
+                    parent = child.id
+                }
+                if found { restoredSelection = parent }
+            }
+            guard phase != .cancelling, !isShutDown else { throw CancellationError() }
+            let oldBytes = summary?.rootAttributedBytes
+            // No suspension from here to the completed replacement state.
+            scanID = metadata.scanID
+            rootNodeID = metadata.rootNodeID
+            currentNodeID = focus
+            breadcrumbs = path
+            navigationHistory = path.map(\.nodeID)
+            historyIndex = navigationHistory.count - 1
+            expandedNodeIDs = []
+            suppressedPreviewNodeIDs = []
+            expansionVersion += 1
+            selectedNodeID = restoredSelection
+            selectedItem = restoredSelection.flatMap { scene.item($0) }
+            if selectedItem == nil { selectedNodeID = nil }
+            selectedAggregate = selectedNodeID.flatMap { scene.knownAggregate(for: $0) }
+            selectedOther = nil
+            selectionToken += 1
+            revealError = nil
+            treemapScene = scene.withDetailMode(detailMode)
+            sceneRevision = scene.revision
+            sceneError = nil
+            committedRevision = refreshRevision
+            childPage = nil
+            summary = newSummary
+            if let volume = newSummary.volume { self.volume = volume }
+            issueCount = newSummary.issueCount
+            permissionLimited = limited
+            phase = limited ? .permissionLimited : .completed
+            userError = nil
+            if let oldBytes, oldBytes > newSummary.rootAttributedBytes {
+                refreshMessage = "已更新 · 扫描范围减少 \(ByteFormatting.bytes(oldBytes - newSummary.rootAttributedBytes))"
+            } else {
+                refreshMessage = "已更新 · \(components.count > path.count - 1 ? "原目录已不存在，返回上级" : "当前位置已保留")"
+            }
+            scheduleRefresh(force: true)
+            isReplacingSnapshot = false
+            if let selectedNodeID { requestAggregateRefresh(nodeID: selectedNodeID) }
+        } catch {
+            phase = backup?.phase ?? .completed
+            progress = backup?.progress
+            refreshMessage = error is CancellationError
+                ? "刷新已取消 · 已保留上次结果" : "无法读取新结果 · 已保留上次结果"
+            if !(error is CancellationError) { userError = AppUserError.classify(error) }
+        }
+    }
+
+    private enum AppRefreshError: Error { case sceneUnavailable }
+
+    /// Session-only raw names, not persisted paths; preserves invalid UTF-8.
+    private func relativeNameBytes(scanID: ScanID, nodeID: NodeID?) async throws -> [Data] {
+        guard let nodeID else { return [] }
+        let chain = try await sceneLoader.ancestors(scanID: scanID, nodeID: nodeID)
+        var names: [Data] = []
+        for node in chain.dropFirst() {
+            guard let name = try await sceneLoader.name(id: node.name, scanID: scanID) else {
+                throw AppRefreshError.sceneUnavailable
+            }
+            names.append(name.utf8)
+        }
+        return names
+    }
+
     // MARK: Update application (10 Hz)
 
     /// Applies the newest pending update per channel. Internal for tests.
     func drain() {
         let pending = buffer.takePending()
+        if isRefreshing {
+            if let metadata = pending.started {
+                refreshMetadata = metadata
+                if phase == .preparing { phase = .scanning }
+            }
+            if let progress = pending.progress { self.progress = progress }
+            if let revision = pending.committedRevision { refreshRevision = revision }
+            // Do not attach new-scan facts to old-scan IDs or reload the old
+            // scene for each new commit. Replacement happens atomically below.
+            return
+        }
         if let metadata = pending.started {
             scanID = metadata.scanID
             rootNodeID = metadata.rootNodeID
@@ -513,10 +848,10 @@ public final class AppModel {
     // MARK: Treemap navigation
 
     /// Whether a previous focus exists in this scan's history.
-    public var canGoBack: Bool { historyIndex > 0 }
+    public var canGoBack: Bool { !isReplacingSnapshot && historyIndex > 0 }
 
     /// Whether the breadcrumb path has a parent of the current focus.
-    public var canGoUp: Bool { breadcrumbs.count > 1 }
+    public var canGoUp: Bool { !isReplacingSnapshot && breadcrumbs.count > 1 }
 
     /// Number of direct children currently shown in the focus page.
     public var visibleItemCount: Int { treemapScene?.focusPage.items.count ?? 0 }
@@ -527,18 +862,28 @@ public final class AppModel {
     /// Whether the scan has reached a terminal phase.
     public var isTerminal: Bool { isTerminalPhase() }
 
-    /// Selects a real scene item.
+    /// Selects a real scene item. Blocked while the displayed map belongs to a
+    /// different focus (a retained old map being replaced), so a stale tile can
+    /// never create a new selection.
     public func select(_ item: TreemapSceneItem) {
+        guard !isSceneStale else { return }
+        selectionToken += 1
+        revealError = nil
         selectedOther = nil
         selectedNodeID = item.nodeID
         selectedItem = item
-        loadSelectedAggregate()
+        // Seed from the scene when the directory's own page is already loaded;
+        // otherwise a bounded refresh fills it in.
+        selectedAggregate = treemapScene?.knownAggregate(for: item.nodeID)
+        requestAggregateRefresh(nodeID: item.nodeID)
     }
 
     /// Selects a synthetic "other" tile. It carries no node identity, so it can
     /// never trigger Finder or directory navigation.
     public func selectOther(parentID: NodeID, collapsedCount: UInt64, effectiveBytes: UInt64) {
+        guard !isSceneStale else { return }
         selectionToken += 1
+        invalidateAggregateQuery()
         revealError = nil
         selectedOther = TreemapOtherSelection(
             parentID: parentID,
@@ -550,9 +895,13 @@ public final class AppModel {
         selectedAggregate = nil
     }
 
-    /// Selects a node already present in the scene, if known.
+    /// Selects a node already present in the scene, if known. Blocked while the
+    /// map is stale for the current focus.
     public func selectNode(_ nodeID: NodeID) {
+        guard !isSceneStale else { return }
         guard let item = treemapScene?.item(nodeID) else {
+            selectionToken += 1
+            invalidateAggregateQuery()
             selectedOther = nil
             selectedNodeID = nodeID
             selectedItem = nil
@@ -565,6 +914,7 @@ public final class AppModel {
     /// Clears the current selection.
     public func clearSelection() {
         selectionToken += 1
+        invalidateAggregateQuery()
         selectedNodeID = nil
         selectedItem = nil
         selectedAggregate = nil
@@ -575,8 +925,39 @@ public final class AppModel {
     /// Compact, path-free status for children omitted by the query limit whose
     /// weight is not yet known. No fake area is drawn for them.
     public var hiddenOmittedMessage: String? {
-        guard let count = treemapScene?.hiddenOmittedCount, count > 0 else { return nil }
-        return "还有 \(count) 项正在统计"
+        guard let count = treemapScene?.hiddenOmittedCount else { return nil }
+        return progressWording.omittedItemsMessage(count: count)
+    }
+
+    /// Best-known effective bytes for the current selection, or `nil` when a
+    /// selected directory's aggregate is unknown. A directory's scene weight is
+    /// trusted when it is positive; a zero scene weight is only a real zero when
+    /// an aggregate says so, otherwise it is unknown (never a fabricated 0).
+    public var selectedEffectiveBytes: UInt64? {
+        guard let item = selectedItem else { return nil }
+        if !item.isDirectoryLike { return item.effectiveBytes }
+        if let aggregate = selectedAggregate { return aggregate.attributedBytes }
+        return item.effectiveBytes > 0 ? item.effectiveBytes : nil
+    }
+
+    /// Best-known effective bytes for one bounded-list row, or `nil` when a
+    /// directory's aggregate is unknown. Files always have a known weight; a
+    /// directory whose page is loaded can use its own aggregate; and a directory
+    /// under a *completed* parent is final, so a zero scene weight there is a
+    /// real zero rather than an unknown. A positive scene weight is always real
+    /// evidence. No extra query is issued for any of these.
+    public func listEffectiveBytes(for item: TreemapSceneItem) -> UInt64? {
+        if !item.isDirectoryLike { return item.effectiveBytes }
+        if let aggregate = treemapScene?.knownAggregate(for: item.nodeID) {
+            return aggregate.attributedBytes
+        }
+        if item.effectiveBytes == 0,
+           treemapScene?.containingPage(for: item.nodeID)?.aggregate?.isComplete == true {
+            // The containing parent's complete aggregate proves this child's
+            // statistics are final, so an observed zero is a known zero.
+            return 0
+        }
+        return item.effectiveBytes > 0 ? item.effectiveBytes : nil
     }
 
     /// Path-free display path of the current selection relative to the scan
@@ -587,6 +968,7 @@ public final class AppModel {
             return "其他（\(other.collapsedCount) 项）"
         }
         guard let nodeID = selectedNodeID,
+              !isSceneStale,
               let scene = treemapScene,
               let relative = scene.displayPath(from: nodeID) else {
             return nil
@@ -602,9 +984,15 @@ public final class AppModel {
         detailMode = mode
     }
 
-    /// Expands a directory in place. The ninth expansion evicts the earliest
-    /// expanded directory that is not the current selection.
+    /// Expands a directory in place. Blocked while the map is stale so an old
+    /// tile cannot mutate the new focus's expansion state. The ninth expansion
+    /// evicts the earliest expanded directory that is not the current
+    /// selection. An explicit expand also clears any earlier preview suppression.
     public func expand(_ nodeID: NodeID) {
+        guard !isSceneStale else { return }
+        if suppressedPreviewNodeIDs.contains(nodeID) {
+            suppressedPreviewNodeIDs.removeAll { $0 == nodeID }
+        }
         guard let item = treemapScene?.item(nodeID), item.isDirectoryLike else { return }
         guard !expandedNodeIDs.contains(nodeID) else { return }
         guard expandedNodeIDs.count < maximumExpandedCount else {
@@ -623,12 +1011,40 @@ public final class AppModel {
         scheduleSceneRefresh(force: true)
     }
 
-    /// Collapses a previously expanded directory.
+    /// Collapses a directory in place. A directory that was only shown by the
+    /// automatic shallow preview is added to the suppressed set so the next
+    /// scan refresh does not reopen it. A directory the user explicitly expanded
+    /// and then collapsed is suppressed the same way.
     public func collapse(_ nodeID: NodeID) {
-        guard let index = expandedNodeIDs.firstIndex(of: nodeID) else { return }
-        expandedNodeIDs.remove(at: index)
+        guard !isSceneStale else { return }
+        let wasExpanded = expandedNodeIDs.contains(nodeID)
+            || treemapScene?.expandedPages[nodeID] != nil
+        guard wasExpanded else { return }
+        expandedNodeIDs.removeAll { $0 == nodeID }
+        if !suppressedPreviewNodeIDs.contains(nodeID) {
+            suppressedPreviewNodeIDs.append(nodeID)
+        }
         expansionVersion += 1
         scheduleSceneRefresh(force: true)
+    }
+
+    /// Whether `nodeID` currently has children shown, either because the user
+    /// expanded it or because of the automatic shallow preview.
+    public func isExpanded(_ nodeID: NodeID) -> Bool {
+        treemapScene?.expandedPages[nodeID] != nil
+    }
+
+    /// Whether `nodeID` is expanded only by the automatic preview (not by an
+    /// explicit user expansion).
+    public func isPreviewExpanded(_ nodeID: NodeID) -> Bool {
+        !expandedNodeIDs.contains(nodeID) && treemapScene?.expandedPages[nodeID] != nil
+    }
+
+    /// Whether `nodeID` may be expanded (a directory-like item that is not
+    /// already expanded).
+    public func canExpand(_ nodeID: NodeID) -> Bool {
+        guard let item = treemapScene?.item(nodeID) else { return false }
+        return item.isDirectoryLike && !isExpanded(nodeID)
     }
 
     /// Enters a directory: resets in-place expansion and pushes history.
@@ -639,7 +1055,7 @@ public final class AppModel {
 
     /// Jumps back one entry in this scan's navigation history.
     public func goBack() async {
-        guard historyIndex > 0 else { return }
+        guard canGoBack else { return }
         historyIndex -= 1
         await moveFocus(to: navigationHistory[historyIndex], pushHistory: false)
     }
@@ -657,11 +1073,14 @@ public final class AppModel {
     }
 
     private func moveFocus(to nodeID: NodeID, pushHistory: Bool) async {
+        guard !isReplacingSnapshot else { return }
         guard let scanID else { return }
         currentNodeID = nodeID
         expandedNodeIDs = []
+        suppressedPreviewNodeIDs = []
         expansionVersion += 1
         selectionToken += 1
+        invalidateAggregateQuery()
         selectedNodeID = nil
         selectedItem = nil
         selectedAggregate = nil
@@ -705,23 +1124,80 @@ public final class AppModel {
         self.scanID == scanID
     }
 
-    private func loadSelectedAggregate() {
-        selectionToken += 1
-        let token = selectionToken
-        revealError = nil
-        guard let scanID,
-              let item = selectedItem,
-              item.isDirectoryLike else {
+    /// Requests a bounded, single-flight aggregate refresh for `nodeID`.
+    ///
+    /// At most one query is in flight; a request while one is running marks it
+    /// pending and runs once afterwards, so scene revisions can never spawn an
+    /// unbounded number of tasks. Files have no aggregate row and clear it.
+    private func requestAggregateRefresh(nodeID: NodeID) {
+        guard let scanID, selectedNodeID == nodeID else { return }
+        guard let item = selectedItem, item.isDirectoryLike else {
             selectedAggregate = nil
             return
         }
-        selectedAggregate = nil
-        let nodeID = item.nodeID
+        if aggregateQueryTask != nil {
+            aggregateQueryPending = true
+            return
+        }
+        startAggregateQuery(scanID: scanID, nodeID: nodeID)
+    }
+
+    private func startAggregateQuery(scanID: ScanID, nodeID: NodeID) {
+        aggregateQueryGeneration += 1
+        let generation = aggregateQueryGeneration
         let loader = sceneLoader
-        Task { @MainActor [weak self] in
+        aggregateQueryTask = Task { @MainActor [weak self] in
             let aggregate = try? await loader.aggregate(scanID: scanID, nodeID: nodeID)
-            guard let self, token == self.selectionToken, self.selectedNodeID == nodeID else { return }
-            self.selectedAggregate = aggregate
+            guard let self else { return }
+            // A superseded task may return after a newer query started (for
+            // example a loader that ignores cancellation while blocked on
+            // SQLite). It must not touch the new task handle, the pending flag
+            // or the aggregate: check the generation before any bookkeeping.
+            guard generation == self.aggregateQueryGeneration else { return }
+            self.aggregateQueryTask = nil
+            if self.selectedNodeID == nodeID {
+                self.selectedAggregate = aggregate
+            }
+            if self.aggregateQueryPending {
+                self.aggregateQueryPending = false
+                self.requestAggregateRefresh(nodeID: nodeID)
+            }
+        }
+    }
+
+    /// Invalidates any in-flight aggregate query. Used by selection changes,
+    /// navigation, a new scan, clear and shutdown so an old query can never
+    /// overwrite a newer, complete aggregate.
+    private func invalidateAggregateQuery() {
+        aggregateQueryGeneration += 1
+        aggregateQueryTask?.cancel()
+        aggregateQueryTask = nil
+        aggregateQueryPending = false
+    }
+
+    /// Refreshes the selected item and aggregate from a newly applied scene.
+    ///
+    /// The scene token already guarantees the same scan generation and focus.
+    /// A loaded page for the selected directory carries its own aggregate, so
+    /// that value wins and invalidates any slower in-flight query; otherwise the
+    /// bounded refresh fetches just that directory.
+    private func refreshSelectionFromScene(_ scene: TreemapSceneData) {
+        guard selectedOther == nil, let nodeID = selectedNodeID else { return }
+        if let item = scene.item(nodeID) {
+            selectedItem = item
+        }
+        if let aggregate = scene.knownAggregate(for: nodeID) {
+            aggregateQueryGeneration += 1
+            aggregateQueryTask?.cancel()
+            aggregateQueryTask = nil
+            aggregateQueryPending = false
+            selectedAggregate = aggregate
+        } else if let item = selectedItem, item.isDirectoryLike {
+            // Once the aggregate is final it cannot change, so a scene revision
+            // does not need another query for this selection.
+            if selectedAggregate?.isComplete != true {
+                requestAggregateRefresh(nodeID: nodeID)
+            }
         }
     }
 
@@ -729,6 +1205,10 @@ public final class AppModel {
     /// still exists. Returns `nil` and records a path-free reason on failure.
     public func finderURLForSelection() async -> URL? {
         let token = selectionToken
+        guard !isSceneStale else {
+            revealError = "当前位置正在更新，请稍候再试"
+            return nil
+        }
         guard let scanID,
               let nodeID = selectedNodeID,
               let rootNodeID,
@@ -771,7 +1251,7 @@ public final class AppModel {
     // MARK: Treemap scene refresh
 
     private func isTerminalPhase() -> Bool {
-        switch phase {
+        switch isRefreshing ? refreshBackup?.phase ?? phase : phase {
         case .completed, .cancelled, .failed, .permissionLimited:
             return true
         case .idle, .choosingRoot, .ready, .preparing, .scanning, .cancelling:
@@ -788,6 +1268,9 @@ public final class AppModel {
         activeSceneToken = nil
         sceneRefreshInFlight = false
         sceneRefreshPending = false
+        // A new scan, shutdown or reset invalidates any in-flight aggregate
+        // query so an old result cannot attach to a later selection.
+        invalidateAggregateQuery()
     }
 
     /// Full data identity of a scene query: every model value whose change
@@ -800,6 +1283,7 @@ public final class AppModel {
         let focus: NodeID
         let expansionVersion: Int
         let expansionSet: [NodeID]
+        let suppressedPreview: [NodeID]
         let isTerminal: Bool
     }
 
@@ -811,6 +1295,7 @@ public final class AppModel {
             focus: focus,
             expansionVersion: expansionVersion,
             expansionSet: expandedNodeIDs,
+            suppressedPreview: suppressedPreviewNodeIDs.sorted { $0.rawValue < $1.rawValue },
             isTerminal: isTerminalPhase()
         )
     }
@@ -855,13 +1340,17 @@ public final class AppModel {
         let display = rootDisplayName ?? ""
         let focusName = breadcrumbs.last?.name ?? display
         let focusKind = breadcrumbs.last?.kind ?? .directory
+        let previewLimit = previewExpandedLimit
+        let previewPageLimit = previewPageLimit
         sceneQueryTask = Task { @MainActor [weak self] in
             let scene = await AppModel.buildScene(
                 loader: loader,
                 token: token,
                 focusName: focusName,
                 focusKind: focusKind,
-                rootDisplayName: display
+                rootDisplayName: display,
+                previewLimit: previewLimit,
+                previewPageLimit: previewPageLimit
             )
             guard let self else { return }
             // A newer query superseded this one; it must not touch any state.
@@ -879,6 +1368,10 @@ public final class AppModel {
                     self.treemapScene = scene.withDetailMode(self.detailMode)
                     self.sceneRevision = scene.revision
                     self.sceneError = nil
+                    // Keep the current real selection in sync with the new
+                    // scene: its item weight and (when its page is loaded) its
+                    // aggregate update without the user re-selecting.
+                    self.refreshSelectionFromScene(scene)
                 } else {
                     self.sceneError = "无法读取快照；已保留上一版地图"
                 }
@@ -895,7 +1388,9 @@ public final class AppModel {
         token: SceneQueryToken,
         focusName: String,
         focusKind: NodeKind,
-        rootDisplayName: String
+        rootDisplayName: String,
+        previewLimit: Int,
+        previewPageLimit: Int
     ) async -> TreemapSceneData? {
         do {
             let focusPage = try await loader.loadChildren(
@@ -904,25 +1399,59 @@ public final class AppModel {
                 limit: 500
             )
             var expanded: [NodeID: TreemapScenePage] = [:]
+            var maxRevision = focusPage.snapshotRevision
             for id in token.expansionSet {
                 let page = try await loader.loadChildren(
                     scanID: token.scanID,
                     nodeID: id,
                     limit: 200
                 )
+                maxRevision = max(maxRevision, page.snapshotRevision)
                 expanded[id] = TreemapScenePage.make(from: page, parentID: id)
+            }
+            // Bounded shallow preview: open the largest directory-like focus
+            // children so the first screen already shows two levels, without
+            // ever reading the whole tree. User expansions and explicit
+            // preview suppressions always win.
+            let suppressed = Set(token.suppressedPreview)
+            let userExpanded = Set(token.expansionSet)
+            let previewCandidates = focusPage.items
+                .filter { item in
+                    item.node.kind.isDirectoryLike
+                        && item.effectiveAttributedBytes > 0
+                        && !userExpanded.contains(item.node.id)
+                        && !suppressed.contains(item.node.id)
+                }
+                .sorted { lhs, rhs in
+                    if lhs.effectiveAttributedBytes != rhs.effectiveAttributedBytes {
+                        return lhs.effectiveAttributedBytes > rhs.effectiveAttributedBytes
+                    }
+                    return lhs.node.id.rawValue < rhs.node.id.rawValue
+                }
+                .prefix(previewLimit)
+            var previewOrder: [NodeID] = []
+            for item in previewCandidates {
+                let id = item.node.id
+                let page = try await loader.loadChildren(
+                    scanID: token.scanID,
+                    nodeID: id,
+                    limit: previewPageLimit
+                )
+                maxRevision = max(maxRevision, page.snapshotRevision)
+                expanded[id] = TreemapScenePage.make(from: page, parentID: id)
+                previewOrder.append(id)
             }
             return TreemapSceneData(
                 scanID: token.scanID,
                 scanGeneration: token.generation,
-                revision: focusPage.snapshotRevision,
+                revision: maxRevision,
                 focusNodeID: token.focus,
                 focusName: focusName,
                 focusKind: focusKind,
                 focusAggregate: focusPage.parentAggregate,
                 focusPage: TreemapScenePage.make(from: focusPage, parentID: token.focus),
                 expandedPages: expanded,
-                expansionOrder: token.expansionSet,
+                expansionOrder: token.expansionSet + previewOrder,
                 expansionVersion: token.expansionVersion,
                 // Stamped with the live mode when the result is applied.
                 detailMode: .overview,
@@ -937,6 +1466,12 @@ public final class AppModel {
     // MARK: Helpers
 
     private func resetScanState() {
+        isRefreshing = false
+        isReplacingSnapshot = false
+        refreshBackup = nil
+        refreshMetadata = nil
+        refreshRevision = nil
+        refreshMessage = nil
         stopSceneRefresh()
         scanID = nil
         rootNodeID = nil
@@ -957,6 +1492,7 @@ public final class AppModel {
         selectedAggregate = nil
         selectedOther = nil
         expandedNodeIDs = []
+        suppressedPreviewNodeIDs = []
         expansionVersion = 0
         treemapScene = nil
         sceneRevision = nil
@@ -987,5 +1523,11 @@ public final class AppModel {
     /// Test hook: waits until the current scan's finalizer has run.
     func waitForScanToFinish() async {
         await scanTask?.value
+    }
+
+    /// Test hook: forces a scene re-read without changing navigation, so tests
+    /// can prove preview suppression survives a scan refresh.
+    func reloadSceneForTesting() {
+        scheduleSceneRefresh(force: true)
     }
 }

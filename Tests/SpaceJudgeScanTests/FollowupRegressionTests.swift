@@ -144,11 +144,154 @@ struct FollowupRegressionTests {
         #expect(revisions == Array(1...UInt64(revisions.count)))
     }
 
+    // MARK: Issue 1b - concurrent workers under a full buffer
+
+    /// Several workers produce batches while the consumer deliberately stalls
+    /// on a one-slot buffer. Every producer ends up blocked retrying a dropped
+    /// `yield`; without a single-writer FIFO gate a later worker can win the
+    /// freed slot and publish a higher revision before an earlier one.
+    @Test(
+        "Concurrent workers keep batch revisions contiguous under backpressure",
+        .timeLimit(.minutes(2))
+    )
+    func concurrentWorkerBackpressureKeepsRevisionOrder() async throws {
+        let fixture = try TempFixture()
+        for directory in 0..<8 {
+            for file in 0..<300 {
+                try fixture.file("d\(directory)/f\(file)", contents: "x")
+            }
+        }
+        let engine = FileSystemScanEngine(
+            configuration: ScanConfiguration(
+                enumerator: ReferenceEnumerator(),
+                workerCount: 4,
+                batchNodeLimit: 20,
+                batchTimeMilliseconds: 100_000,
+                eventBufferSize: 1
+            )
+        )
+        let stream = engine.events(for: request(for: fixture.url.path))
+
+        var knownNames: Set<NameID> = []
+        var revisions: [UInt64] = []
+        var nodeCount = 0
+        var nameViolations = 0
+        var terminalCount = 0
+        var batchesAfterTerminal = 0
+        var paused = false
+
+        for try await event in stream {
+            switch event {
+            case .batch(let batch):
+                if terminalCount > 0 { batchesAfterTerminal += 1 }
+                revisions.append(batch.revision.rawValue)
+                for name in batch.names { knownNames.insert(name.id) }
+                for node in batch.nodes {
+                    nodeCount += 1
+                    if !knownNames.contains(node.name) { nameViolations += 1 }
+                }
+                if !paused {
+                    paused = true
+                    // Hold the consumer while four producers race for the one
+                    // free slot, forcing repeated dropped-yield retries.
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                }
+            case .completed, .cancelled:
+                terminalCount += 1
+            default:
+                break
+            }
+        }
+
+        #expect(paused)
+        #expect(terminalCount == 1)
+        #expect(batchesAfterTerminal == 0)
+        #expect(!revisions.isEmpty)
+        #expect(revisions == Array(1...UInt64(revisions.count)))
+        // Root + 8 directories + 2400 files.
+        #expect(nodeCount == 2409)
+        #expect(nameViolations == 0)
+    }
+
+    @Test(
+        "Cancel while the event buffer is full yields one last cancelled terminal",
+        .timeLimit(.minutes(1))
+    )
+    func cancelWithFullBuffer() async throws {
+        let fixture = try TempFixture()
+        // Dedicated spool root outside the scanned tree so the count cannot be
+        // polluted by other parallel suites.
+        let spoolRoot = try TempFixture(prefix: "spacejudge-spool-cancel-full")
+        for directory in 0..<8 {
+            for file in 0..<200 {
+                try fixture.file("d\(directory)/f\(file)", contents: "x")
+            }
+        }
+        let engine = FileSystemScanEngine(
+            configuration: ScanConfiguration(
+                enumerator: ReferenceEnumerator(),
+                workerCount: 4,
+                batchNodeLimit: 20,
+                batchTimeMilliseconds: 100_000,
+                eventBufferSize: 1,
+                spoolDirectory: spoolRoot.url
+            )
+        )
+        let scanID = ScanID()
+        let spoolBefore = spoolFiles(in: spoolRoot.url).count
+        let fdsBefore = settledFileDescriptorCount()
+        let stream = engine.events(for: request(for: fixture.url.path), scanID: scanID)
+        var iterator = stream.makeAsyncIterator()
+
+        var events: [ScanEvent] = []
+        if let first = try await iterator.next() { events.append(first) }
+        // With one slot, the producer fills it and every worker piles up on a
+        // dropped-yield retry while the consumer is not reading.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        await engine.cancel(scanID: scanID)
+        let cancelStart = Date()
+        while let event = try await iterator.next() { events.append(event) }
+        let terminalDelay = Date().timeIntervalSince(cancelStart)
+
+        var cancelledCount = 0
+        var completedCount = 0
+        var batchesAfterTerminal = 0
+        var sawTerminal = false
+        var terminalIsLast = false
+        for (index, event) in events.enumerated() {
+            if sawTerminal, case .batch = event { batchesAfterTerminal += 1 }
+            switch event {
+            case .completed:
+                completedCount += 1
+                sawTerminal = true
+                terminalIsLast = index == events.count - 1
+            case .cancelled:
+                cancelledCount += 1
+                sawTerminal = true
+                terminalIsLast = index == events.count - 1
+            default:
+                break
+            }
+        }
+
+        #expect(cancelledCount == 1)
+        #expect(completedCount == 0)
+        #expect(batchesAfterTerminal == 0)
+        #expect(terminalIsLast)
+        #expect(terminalDelay < 2.0)
+        let diagnostics = await awaitDiagnostics(engine, scanID: scanID)
+        #expect(diagnostics != nil)
+        #expect(engine.debugDiagnosticsCount() == 0)
+        #expect(spoolFiles(in: spoolRoot.url).count <= spoolBefore)
+        #expect(settledFileDescriptorCount() <= fdsBefore + 8)
+    }
+
     // MARK: Issue 2 - hard frontier bound and spool
 
     @Test("A two-item frontier spools overflow and stays complete", .timeLimit(.minutes(2)))
     func narrowFrontierSpools() async throws {
         let fixture = try TempFixture()
+        let spoolRoot = try TempFixture(prefix: "spacejudge-spool-narrow")
         for index in 0..<300 {
             try fixture.directory("d\(index)/inner")
         }
@@ -164,7 +307,8 @@ struct FollowupRegressionTests {
             configuration: ScanConfiguration(
                 enumerator: ReferenceEnumerator(),
                 workerCount: 1,
-                maximumQueuedDirectories: 2
+                maximumQueuedDirectories: 2,
+                spoolDirectory: spoolRoot.url
             )
         )
 
@@ -174,15 +318,15 @@ struct FollowupRegressionTests {
             scanID: broadScanID
         )
         let narrowScanID = ScanID()
-        let fdsBefore = openFileDescriptorCount()
-        let spoolBefore = spoolFilesInTemporaryDirectory().count
+        let fdsBefore = settledFileDescriptorCount()
+        let spoolBefore = spoolFiles(in: spoolRoot.url).count
         let narrow = try await collectScan(
             engine: narrowEngine,
             request: request(for: fixture.url.path),
             scanID: narrowScanID
         )
-        let fdsAfter = openFileDescriptorCount()
-        let spoolAfter = spoolFilesInTemporaryDirectory().count
+        let fdsAfter = settledFileDescriptorCount()
+        let spoolAfter = spoolFiles(in: spoolRoot.url).count
 
         #expect(broad.status == .completed)
         #expect(narrow.status == .completed)
@@ -201,12 +345,14 @@ struct FollowupRegressionTests {
         #expect(narrowEngine.debugDiagnosticsCount() == 0)
         #expect(broadEngine.debugDiagnosticsCount() == 0)
         #expect(spoolAfter <= spoolBefore)
+        #expect(spoolFiles(in: spoolRoot.url).isEmpty)
         #expect(fdsAfter <= fdsBefore + 8)
     }
 
     @Test("Consumer termination releases workers and cleans the spool", .timeLimit(.minutes(1)))
     func consumerTermination() async throws {
         let fixture = try TempFixture()
+        let spoolRoot = try TempFixture(prefix: "spacejudge-spool-consumer")
         for index in 0..<400 {
             try fixture.directory("d\(index)/inner")
         }
@@ -214,11 +360,12 @@ struct FollowupRegressionTests {
             configuration: ScanConfiguration(
                 enumerator: ReferenceEnumerator(),
                 workerCount: 1,
-                maximumQueuedDirectories: 2
+                maximumQueuedDirectories: 2,
+                spoolDirectory: spoolRoot.url
             )
         )
         let scanID = ScanID()
-        let spoolBefore = spoolFilesInTemporaryDirectory().count
+        let spoolBefore = spoolFiles(in: spoolRoot.url).count
         do {
             let stream = engine.events(for: request(for: fixture.url.path), scanID: scanID)
             var seen = 0
@@ -235,7 +382,7 @@ struct FollowupRegressionTests {
         let diagnostics = await awaitDiagnostics(engine, scanID: scanID)
         #expect(diagnostics != nil)
         #expect(engine.debugDiagnosticsCount() == 0)
-        #expect(spoolFilesInTemporaryDirectory().count <= spoolBefore)
+        #expect(spoolFiles(in: spoolRoot.url).count <= spoolBefore)
     }
 
     // MARK: Issue 3 - cancel discards pending batches
@@ -311,6 +458,7 @@ struct FollowupRegressionTests {
     @Test("Cancelling a spooled scan removes the spool file", .timeLimit(.minutes(2)))
     func cancelSpooledScan() async throws {
         let fixture = try TempFixture()
+        let spoolRoot = try TempFixture(prefix: "spacejudge-spool-cancel")
         for index in 0..<400 {
             try fixture.directory("d\(index)/inner")
         }
@@ -320,11 +468,12 @@ struct FollowupRegressionTests {
                 workerCount: 1,
                 batchNodeLimit: 10,
                 eventBufferSize: 4,
-                maximumQueuedDirectories: 2
+                maximumQueuedDirectories: 2,
+                spoolDirectory: spoolRoot.url
             )
         )
         let scanID = ScanID()
-        let spoolBefore = spoolFilesInTemporaryDirectory().count
+        let spoolBefore = spoolFiles(in: spoolRoot.url).count
         let collected = try await collectScan(
             engine: engine,
             request: request(for: fixture.url.path),
@@ -337,7 +486,8 @@ struct FollowupRegressionTests {
         #expect(diagnostics?.spoolUsed == true)
         #expect((diagnostics?.queueHighWater ?? .max) <= 2)
         #expect(engine.debugDiagnosticsCount() == 0)
-        #expect(spoolFilesInTemporaryDirectory().count <= spoolBefore)
+        #expect(spoolFiles(in: spoolRoot.url).count <= spoolBefore)
+        #expect(spoolFiles(in: spoolRoot.url).isEmpty)
     }
 
     // MARK: Issue 6 - damaged hard link does not pollute a later claim

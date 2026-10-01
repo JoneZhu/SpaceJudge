@@ -8,6 +8,10 @@ import SpaceJudgeAppSupport
 @MainActor
 final class OpenPanelDirectoryAccess: DirectoryAccess {
     func pickDirectory() async -> DirectorySelection? {
+        await pickDirectory(initialURL: nil)
+    }
+
+    func pickDirectory(initialURL: URL?) async -> DirectorySelection? {
 #if DEBUG
         // Pi-only smoke seam: lets an automated build select a fixture root
         // without driving the open panel. Release ignores it entirely.
@@ -24,6 +28,7 @@ final class OpenPanelDirectoryAccess: DirectoryAccess {
         panel.resolvesAliases = true
         panel.prompt = "选择"
         panel.message = "选择要扫描的文件夹或磁盘"
+        panel.directoryURL = initialURL
         let response = await panel.begin()
         guard response == .OK, let url = panel.url else { return nil }
         return DirectorySelection(url: url)

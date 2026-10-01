@@ -12,6 +12,8 @@ public enum SnapshotQueryLimits {
 public enum SnapshotQueryError: Error, Equatable, Sendable {
     /// `childPage(of:in:limit:)` received a limit outside `1...500`.
     case invalidChildPageLimit(Int)
+    /// A repository does not implement exact-name navigation restoration.
+    case nameLookupUnsupported
 }
 
 /// Persisted lifecycle state for one scan, independent of UI concerns.

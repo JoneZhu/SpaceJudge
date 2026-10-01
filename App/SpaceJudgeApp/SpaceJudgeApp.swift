@@ -5,6 +5,11 @@ import SpaceJudgeAppSupport
 ///
 /// The scene only wires the AppKit delegate, the open-panel adapter and the
 /// SwiftUI status/list UI. All testable state lives in `SpaceJudgeAppSupport`.
+///
+/// Menu commands are installed by `AppDelegate` through AppKit rather than a
+/// SwiftUI `.commands` builder: the enablement depends on the `@Observable`
+/// model, and AppKit `validateMenuItem` makes the menu item state a reliable,
+/// observable function of the shared `AppCommandPolicy`.
 @main
 struct SpaceJudgeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
@@ -14,22 +19,7 @@ struct SpaceJudgeApp: App {
             RootView()
                 .environmentObject(appDelegate)
         }
-        .defaultSize(width: 960, height: 680)
-        .commands {
-            CommandGroup(after: .newItem) {
-                Button("选择文件夹或磁盘…") {
-                    Task { await appDelegate.model?.chooseRoot() }
-                }
-                .keyboardShortcut("o", modifiers: .command)
-                .disabled(appDelegate.model == nil || appDelegate.model?.phase == .choosingRoot)
-
-                Button("重新扫描") {
-                    Task { await appDelegate.model?.rescan() }
-                }
-                .keyboardShortcut("r", modifiers: .command)
-                .disabled(appDelegate.model?.hasRoot != true)
-            }
-        }
+        .defaultSize(width: 1120, height: 760)
     }
 }
 
@@ -50,12 +40,25 @@ struct RootView: View {
                     Text(error)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
+                    Button("重试") {
+                        Task { await appDelegate.retryBootstrap() }
+                    }
+                    .controlSize(.large)
+                    .disabled(appDelegate.isBootstrapping)
+                    .accessibilityIdentifier("bootstrap-retry")
                 }
                 .padding(40)
-                .frame(minWidth: 640, minHeight: 420)
+                .frame(minWidth: 480, minHeight: 360)
             } else {
-                ProgressView("正在准备…")
-                    .frame(minWidth: 640, minHeight: 420)
+                VStack(spacing: 10) {
+                    ProgressView("正在准备…")
+                    if appDelegate.isBootstrapping {
+                        Text("正在打开本地快照数据库…")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(minWidth: 480, minHeight: 360)
             }
         }
     }

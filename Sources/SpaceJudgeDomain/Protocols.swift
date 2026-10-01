@@ -55,4 +55,18 @@ public protocol SnapshotRepository: Sendable {
     func issueSummary(_ scanID: ScanID) async throws -> [IssueAggregateSummary]
     /// Persisted row counts for one scan.
     func statistics(_ scanID: ScanID) async throws -> SnapshotStatistics
+    /// Exact raw-name lookup; used to restore navigation after a new snapshot.
+    func child(named bytes: Data, of parent: NodeID, in scanID: ScanID) async throws -> NodeRecord?
+    /// GUI refresh may retain its displayed snapshot until replacement succeeds.
+    /// Single-snapshot CLI repositories may ignore this optional capability.
+    func retainForRefresh(_ scanID: ScanID?) async
+}
+
+public extension SnapshotRepository {
+    func child(named bytes: Data, of parent: NodeID, in scanID: ScanID) async throws -> NodeRecord? {
+        // A top-500 fallback would falsely report that a small directory was
+        // deleted. Fail explicitly so callers retain the old snapshot instead.
+        throw SnapshotQueryError.nameLookupUnsupported
+    }
+    func retainForRefresh(_ scanID: ScanID?) async {}
 }

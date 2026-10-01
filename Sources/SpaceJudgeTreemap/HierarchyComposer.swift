@@ -17,7 +17,10 @@ public enum TreemapHierarchyComposer {
     public static let topLevelGap = 4.0
     /// Gap between nested siblings, in points.
     public static let nestedGap = 2.0
-    /// Maximum header height reserved above an expanded directory's content.
+    /// Maximum header height is now derived from `TreemapTileChrome` so the
+    /// composer and renderer can never disagree. Kept as a deprecated alias for
+    /// callers that referenced the old constant.
+    @available(*, deprecated, message: "Use TreemapTileChrome.oneLineHeaderHeight")
     public static let maximumHeaderHeight = 16.0
 
     /// Builds a render snapshot for `hierarchy` at `bounds`.
@@ -72,6 +75,16 @@ public enum TreemapHierarchyComposer {
 
     // MARK: - Composition
 
+    /// Rank changes frequently during live scanning. A deterministic name hash
+    /// keeps the directory's color stable across weight changes and rescans;
+    /// descendants still inherit the same muted group color. Do not use Swift's
+    /// randomized Hasher for a user-visible identity.
+    private static func stablePalette(for name: String) -> Int {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in name.utf8 { hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211 }
+        return Int(hash % UInt64(paletteCount))
+    }
+
     private struct PageResult {
         let tiles: [TreemapRenderTile]
         let totalWeight: UInt64
@@ -102,10 +115,10 @@ public enum TreemapHierarchyComposer {
             overflowed: &overflowed,
             hiddenOmitted: &hiddenOmitted
         )
-        for (rank, entry) in entries.enumerated() {
+        for entry in entries {
             append(
                 entry: entry,
-                paletteIndex: rank % paletteCount,
+                paletteIndex: stablePalette(for: entry.node?.name ?? entry.stableKey),
                 depth: 1,
                 parentID: focus.nodeID,
                 maximumDepth: key.detailMode.maximumDepth,
@@ -287,7 +300,12 @@ public enum TreemapHierarchyComposer {
 
     private static func makeContentRect(for rect: TreemapRect, depth: Int) -> TreemapRect? {
         let padding = depth == 1 ? 4.0 : 2.0
-        let header = min(maximumHeaderHeight, rect.height * 0.3)
+        // Shared with the renderer: an expanded tile reserves exactly the band
+        // its title needs, and children always start below it.
+        let header = TreemapTileChrome.headerHeight(
+            tileWidth: rect.width,
+            tileHeight: rect.height
+        )
         var content = rect.insetBy(dx: padding, dy: padding)
         content.y += header
         content.height = max(0, content.height - header)

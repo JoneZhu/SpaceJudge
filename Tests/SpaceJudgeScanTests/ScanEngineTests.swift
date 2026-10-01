@@ -197,13 +197,15 @@ struct ScanEngineTests {
             )
         )
         _ = try await collectScan(engine: engine, request: request(for: fixture.url.path))
-        let before = openFileDescriptorCount()
+        let before = settledFileDescriptorCount()
         for _ in 0..<3 {
             _ = try await collectScan(engine: engine, request: request(for: fixture.url.path))
         }
-        let after = openFileDescriptorCount()
+        let after = settledFileDescriptorCount()
         // Tolerance covers transient descriptors from other parallel suites;
-        // a leak would grow by more than the number of scans.
+        // a leak would grow by more than the number of scans. Both samples use
+        // the settled minimum so a transient descriptor cannot cause a false
+        // failure while a persistent leak is still detected.
         #expect(after <= before + 8, "fd before=\(before) after=\(after)")
     }
 

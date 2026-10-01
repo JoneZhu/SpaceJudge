@@ -8,7 +8,7 @@
 
 ## 工作位置
 
-- 项目：`/Users/hongdazhu/Documents/ChatGPT/SpaceJudge`
+- 项目：`/Users/example/Documents/ChatGPT/SpaceJudge`
 - 当前分支：`master`
 - 当前仓库文件整体尚未提交，全部视为用户/Codex 已有成果，必须保留。
 - 不创建 worktree，不切分支，不 commit，不 push，不签名，不公证，不发布。

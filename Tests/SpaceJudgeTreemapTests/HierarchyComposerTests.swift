@@ -7,6 +7,21 @@ import SpaceJudgeTreemap
 struct HierarchyComposerTests {
     private let bounds = TreemapRect(x: 0, y: 0, width: 1_280, height: 800)
 
+    @Test("Live size changes and new scan IDs do not recolor the same directory")
+    func stableLiveColors() {
+        let before = TreemapHierarchyComposer.snapshot(
+            makeHierarchy(plainPage(1, [file(2, 100), file(3, 200)])), key: makeKey(), bounds: bounds)
+        let after = TreemapHierarchyComposer.snapshot(
+            makeHierarchy(plainPage(1, [
+                TreemapHierarchyNode(nodeID: NodeID(22), name: "file-2", kind: .regularFile, effectiveBytes: 300),
+                file(3, 50)
+            ])), key: makeKey(revision: 2), bounds: bounds)
+        #expect(before.tiles.first { $0.displayName == "file-2" }?.paletteIndex
+            == after.tiles.first { $0.displayName == "file-2" }?.paletteIndex)
+        #expect(before.tiles.first { $0.displayName == "file-3" }?.paletteIndex
+            == after.tiles.first { $0.displayName == "file-3" }?.paletteIndex)
+    }
+
     private func makeKey(
         mode: TreemapDetailMode = .detail,
         revision: UInt64 = 1

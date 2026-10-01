@@ -2,3 +2,30 @@
 .DS_Store
 .build/
 dist/
+node_modules/
+*.tsbuildinfo
+.agent-runtime/
+
+# Local builds, release packages, scan evidence and machine-specific state.
+/build/
+/output/
+*.xcuserstate
+xcuserdata/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.dmg
+*.p12
+*.p8
+*.pem
+*.key
+*.mobileprovision
+.env
+.env.*
+!.env.example
+
+# Personal cleanup journals are retained locally, not published as source.
+/docs/33-local-basic-cleanup-20260929.md
+/docs/34-local-conservative-cleanup-20260930.md
+/docs/35-local-conservative-cleanup-20261001.md

@@ -1,6 +1,6 @@
 /* SpaceJudge InfoPlist.strings（简体中文）。 */
-"NSDesktopFolderUsageDescription" = "SpaceJudge 只在你主动选择桌面这类位置时读取其中项目的名称和大小来绘制空间图；不读取普通文件内容，不修改或删除文件，也不会上传数据。";
-"NSDocumentsFolderUsageDescription" = "SpaceJudge 只在你主动选择文稿这类位置时读取其中项目的名称和大小来绘制空间图；不读取文件内容，不修改或删除文件，也不会上传数据。";
-"NSDownloadsFolderUsageDescription" = "SpaceJudge 只在你主动选择下载这类位置时读取其中项目的名称和大小来绘制空间图；不读取普通文件内容，不修改或删除文件，也不会上传数据。";
-"NSRemovableVolumesUsageDescription" = "SpaceJudge 只在你主动选择可移动卷时读取其中项目的名称和大小来绘制空间图；不读取普通文件内容，不修改或删除文件，也不会上传数据。";
-"NSNetworkVolumesUsageDescription" = "SpaceJudge 只在你主动选择网络卷时读取其中项目的名称和大小来绘制空间图；不读取普通文件内容，不修改或删除文件，也不会上传数据。";
+"NSDesktopFolderUsageDescription" = "SpaceJudge 只在你主动选择桌面这类位置时读取其中项目的名称和大小来绘制空间图；不读取普通文件内容，不修改或删除文件，默认不上传数据；仅在你选择用 Codex 分析时，将选中范围的名称、大小、可选准确路径和扫描元数据交给 Codex 桌面应用作为草稿，由你确认是否发送。";
+"NSDocumentsFolderUsageDescription" = "SpaceJudge 只在你主动选择文稿这类位置时读取其中项目的名称和大小来绘制空间图；不读取文件内容，不修改或删除文件，默认不上传数据；仅在你选择用 Codex 分析时，将选中范围的名称、大小、可选准确路径和扫描元数据交给 Codex 桌面应用作为草稿，由你确认是否发送。";
+"NSDownloadsFolderUsageDescription" = "SpaceJudge 只在你主动选择下载这类位置时读取其中项目的名称和大小来绘制空间图；不读取普通文件内容，不修改或删除文件，默认不上传数据；仅在你选择用 Codex 分析时，将选中范围的名称、大小、可选准确路径和扫描元数据交给 Codex 桌面应用作为草稿，由你确认是否发送。";
+"NSRemovableVolumesUsageDescription" = "SpaceJudge 只在你主动选择可移动卷时读取其中项目的名称和大小来绘制空间图；不读取普通文件内容，不修改或删除文件，默认不上传数据；仅在你选择用 Codex 分析时，将选中范围的名称、大小、可选准确路径和扫描元数据交给 Codex 桌面应用作为草稿，由你确认是否发送。";
+"NSNetworkVolumesUsageDescription" = "SpaceJudge 只在你主动选择网络卷时读取其中项目的名称和大小来绘制空间图；不读取普通文件内容，不修改或删除文件，默认不上传数据；仅在你选择用 Codex 分析时，将选中范围的名称、大小、可选准确路径和扫描元数据交给 Codex 桌面应用作为草稿，由你确认是否发送。";

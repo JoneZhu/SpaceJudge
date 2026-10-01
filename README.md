@@ -1,5 +1,27 @@
 # SpaceJudge · macOS 磁盘空间浏览器
 
+一个只读、原生的 macOS 磁盘空间浏览器：用嵌套空间图找到大目录，在扫描过程中逐步显示结果；可把选中范围的上下文交给已有 Codex 桌面应用制定清理建议，不自动删除文件。
+
+开源许可证：[MIT](LICENSE)。系统要求 macOS 14+；源码构建需要 Xcode 与 Swift 6 工具链。图形界面和原生 CLI 不需要 Node.js，只有可选 MCP 适配器需要 Node.js 20+。
+
+## 从源码开始
+
+```sh
+git clone https://github.com/JoneZhu/SpaceJudge.git
+cd SpaceJudge
+swift test
+xcodebuild -project App/SpaceJudge.xcodeproj -scheme SpaceJudge \
+  -configuration Debug -derivedDataPath build/DerivedData \
+  build CODE_SIGNING_ALLOWED=NO
+open build/DerivedData/Build/Products/Debug/SpaceJudge.app
+```
+
+CLI：`swift build -c release --product spacejudge-agent-cli`，然后运行 `.build/release/spacejudge-agent-cli --help`。
+可选 MCP 的构建、授权根和客户端配置见[本地 Agent runbook](docs/runbooks/local-agent-mcp.md)。
+
+源码公开不等于已发布正式 DMG：当前测试安装包未完成 Developer ID 签名、公证与其他 Mac 的安装验收。
+本机安装包、日志、扫描快照和个人清理记录不纳入源码仓库；历史验收中的本机路径已匿名化，`output/` 证据链接仅在原验收机器上可用。
+
 原生实现的产品规格、扫描内核、数据口径、测试门槛和 Pi 协作流程见 [工程文档](docs/README.md)。HTML 文件是交互原型，不代表原生扫描性能。
 
 ## 当前原生实现
@@ -8,12 +30,65 @@ Phase 0–5D-A 已完成并经 Codex 独立验收：Swift 6 扫描内核、SQLit
 
 - Xcode 工程：`App/SpaceJudge.xcodeproj`
 - Swift 测试：`arch -arm64 swift test`
-- 当前验收结果：421 tests / 57 suites、Xcode Debug/Release 构建通过、99 项缓存/取消/持久化关键测试通过 Thread Sanitizer；100 万 mixed 节点完整扫描 + SQLite 峰值 240.2 MB，持久化计数精确一致；真实启动盘能沿 firmlink 扫描并截断真实 mount，也会把 SpaceJudge 自身缓存显示为无子项叶子；真实点击取消后 UI 与 SQLite 同时为 cancelled。
-- 最新证据与已知边界：[Phase 5C 验收基线](docs/21-phase-5c-baseline.md)
-- 最新实施设计：[Phase 5D 直接分发与发布硬化](docs/22-phase-5d-design.md)
-- 最新验收基线：[Phase 5D-A 直接分发工程就绪](docs/23-phase-5d-a-baseline.md)
+- 当前回归：596 项 Swift 测试 / 81 suites、109 项发布脚本测试通过；49 项 Node/MCP 测试为上一轮 0.5.0 历史结果，本轮未改动该实现。0.5.2 已安装，附带原生 CLI；已用合成目录实测 CLI 定向扫描与所有查询。Codex 草稿接收及真实模型效果尚待人工确认。此前 universal MVP 已实操选择、浏览、信息、Finder、取消和恢复；百万包装夹具 1000001 节点完整持久化，CLI 重扫峰值 RSS 155648000 B，低于 250000000 B 工程门。
+- 最新交付和证据：[原生MVP独立验收](docs/37-native-mvp-acceptance.md)
+- 最短操作入口：[本机MVP使用说明](docs/38-native-mvp-quickstart.md)
+- 最新分析入口：[右键 → Codex 清理上下文与 CLI](docs/42-cleanup-context-and-cli.md)（0.5.2 build 7，无独立登录或内置 Node；全局 CLI/MCP 配置不变）
+- 历史发布工程基线：[Phase 5D-A](docs/23-phase-5d-a-baseline.md)
 
-当前支持启动盘统一可见命名空间与受保护的本地工作缓存，但不联合扫描任意外部/网络卷，也没有 APFS snapshot/clone 独占空间估算、签名、公证或发布产物；仍不包含删除、清理建议、AI 或网络能力。
+当前支持启动盘统一可见命名空间与受保护的本地工作缓存，但不联合扫描任意外部/网络卷，也没有 APFS snapshot/clone 独占空间估算或 Developer ID 签名公证的公开发行包。0.5.2 从右键把选中范围的名称、可选准确路径、大小、扫描元数据与 CLI 用法交给已有 Codex 桌面应用作为草稿，要求核查并给清理方案。不自动发送、不读取文件内容、不执行删除。外部 Codex 使用自身权限设置，不是 SpaceJudge 的只读沙箱。
+
+## 运行原生 App（Phase 7 MVP）
+
+已构建的本机交付可以直接启动：
+
+```sh
+open /Applications/SpaceJudge.app
+```
+
+0.5.2 构建 7 保留启动页、扫描中逐步出图与后台刷新，右键「用 Codex 分析…」用于制定清理方案。
+旧版已备份，安装与回滚记录见 [清理上下文与 CLI](docs/42-cleanup-context-and-cli.md)；新增 App 内 helper，原 CLI 和全局 MCP 配置没有改变。
+使用和限制见文档38、42。源码构建（可选，无需 Node/runtime；随 App CLI 需用 local-candidate.sh --with-cli 打包）：
+
+```sh
+xcodebuild -project App/SpaceJudge.xcodeproj -scheme SpaceJudge \
+  -configuration Debug -derivedDataPath build/DerivedData \
+  build CODE_SIGNING_ALLOWED=NO
+open build/DerivedData/Build/Products/Debug/SpaceJudge.app
+```
+
+首次启动会创建一个只属于本应用的本地 SQLite 快照缓存（`~/Library/Caches/SpaceJudge`），缓存目录本身不会扫描自身。
+
+关键操作：
+
+- `⌘O` / 左上角文件夹按钮：选择要分析的文件夹或磁盘。
+- 单击方块：选中（绿色轮廓），并原位展开目录。
+- 双击目录：进入该目录；也可用面包屑、后退、上一级导航。
+- 顶部右侧：重新扫描；仅扫描进行中显示“取消”。`⌘R` 重新扫描当前选择，扫描进行中不会触发。
+- 概览 / 详细：切换 tile 密度与嵌套深度。
+- 悬停：查看全名、类型与占用；右键：进入 / 展开 / 折叠 / 信息 / 在 Finder 中显示 / 用 Codex 分析。
+- 底部小条：容量“已用 / 总 / 剩余”与“当前位置”大小（当前focus的归属字节；未知用—，
+  活动扫描标注“正在统计”，取消后为“未完成”）；悬停可看扫描范围对账与容量来源。
+- 顶部列表按钮：打开当前范围的有界项目列表（最多 500 项），包含 0 占用/空文件，可选中查看信息或在 Finder 中显示。
+
+切换目录时新位置读取期间，旧地图只作显示且不可选中/展开/进入/Finder，并明确标注上一位置；
+面包屑、后退、上一级仍可用。
+
+默认会为当前页最大的若干目录自动展开两层浅层预览；用户手动折叠的目录（包括先显式展开再折叠）在下一次刷新时不会自行重新打开。展开目录的标题只出现在预留的 header 中，子块从 header 下方开始，不会发生标题与子块重叠。
+
+仅 Debug 构建可用于验收的启动环境变量（Release 完全忽略）：
+
+- `SPACEJUDGE_TEST_APPEARANCE=dark|light`：仅改变本应用的外观。
+- `SPACEJUDGE_TEST_WINDOW_SIZE=736x560`（或 `1120x760` / `1440x900`）：设置窗口内容尺寸。
+- `SPACEJUDGE_TEST_ROOT_PATH`、`SPACEJUDGE_TEST_DATABASE_PATH`：无面板选择固定夹具与临时库。
+
+已知限制与测量范围：
+
+- 没有删除或自动清理能力。普通扫描只读元数据、默认不上传；Codex 桌面草稿由用户检查并确认发送，无需 SpaceJudge 独立登录；模型效果待验收，不自动连接 MCP。
+- 扫描遵循选中根所在卷的边界，不联合跨真实mount；不估算APFS克隆或快照可释放量。
+- 容量优先采用系统“重要用途可用”；当该值为 0 或缺失但普通可用或 Darwin `statfs` 仍有正值时，退化到普通可用并标注来源，不会因此误判满盘。真实全部来源为 0 时仍按 0 处理。
+- 百万内存门已独立通过：完整E2E为145506304 B，最终取消修复后CLI重扫为155648000 B。生成时间不计入扫描，缓存状态未控制；GUI的系统框架footprint与该RSS口径不同，不混用数字，也不把单机结果当作所有磁盘性能承诺。
+- 本机Apple Silicon实操通过；Intel实机、Developer ID、公证和公开分发验证不在本次本机MVP验收内。
 
 Phase 5D 已选择 Developer ID + 公证 DMG 的直接分发方向，并拆分为 5D-A“发布工程就绪”和 5D-B“真实分发验证”。5D-A 已实现并经 Codex 独立验收：Release 启用 Hardened Runtime、保持无 Sandbox 且无 exception entitlement；新增完整 AppIcon 与中英文本地化的只读文件夹权限说明；`scripts/release/` 提供 universal2 ad-hoc 本地候选、fail-closed 的正式签名/公证/staple/Gatekeeper 流水线与 108 项脚本自测；[直接分发 runbook](docs/runbooks/direct-release.md) 记录人工凭据准备、5D-A 本地候选、5D-B 正式发布、验证与回滚。首个干净 Git 基线已经建立；本机尚无 Developer ID Application，因此正式 preflight 现在只剩签名身份 blocker，不会把本地候选宣称为可发布版本，也不会运行真实公证或上传。
 
@@ -25,13 +100,7 @@ Phase 5D 已选择 Developer ID + 公证 DMG 的直接分发方向，并拆分�
 
 所有数据为示例，不读取或删除本机文件，不包含 AI 功能。
 
-更新 V3 预览：
-
-```sh
-python3 /Users/hongdazhu/.codex/plugins/cache/openai-bundled/visualize/1.0.39/skills/visualize/scripts/render.py \
-  /Users/hongdazhu/Documents/ChatGPT/SpaceJudge/spacejudge-map.html \
-  /Users/hongdazhu/Documents/ChatGPT/SpaceJudge/index.html --force --title 'SpaceJudge · 空间图'
-```
+直接在浏览器打开 `index.html` 可体验 V3。`spacejudge-map.html` 是可编辑原型源片段；预览文件保留在仓库中，不要求安装原作者的 Codex 可视化插件。
 
 ## V2 简洁版记录
 
@@ -48,13 +117,7 @@ V2 以大面积空间图为主体，移除 AI 面板、建议、清理清单、�
 
 右上角问号中有简短操作说明。所有数据均为模拟，原型不读取或删除本机文件，也不提供 AI 判断。
 
-更新 V2 预览：
-
-```sh
-python3 /Users/hongdazhu/.codex/plugins/cache/openai-bundled/visualize/1.0.39/skills/visualize/scripts/render.py \
-  /Users/hongdazhu/Documents/ChatGPT/SpaceJudge/spacejudge-simple.html \
-  /Users/hongdazhu/Documents/ChatGPT/SpaceJudge/index.html --force --title 'SpaceJudge · 简洁版'
-```
+直接在浏览器打开 `index-v2.html` 可体验 V2。
 
 ## 以下为 V1 设计记录
 
@@ -88,15 +151,9 @@ python3 /Users/hongdazhu/.codex/plugins/cache/openai-bundled/visualize/1.0.39/sk
 
 - `spacejudge-prototype.html`：自包含可编辑片段，CSS、示例文件树、treemap 布局与交互均在其中。
 - `index-v1.html`：第一版可单独打开的浏览器预览文件，由片段生成。
-- `output/playwright/`：浏览器验证截图与验收记录。
+- `output/playwright/`：本地浏览器验证截图与验收记录，不纳入公开源码提交。
 
-在本机更新片段后，再生成预览：
-
-```sh
-python3 /Users/hongdazhu/.codex/plugins/cache/openai-bundled/visualize/1.0.39/skills/visualize/scripts/render.py \
-  /Users/hongdazhu/Documents/ChatGPT/SpaceJudge/spacejudge-prototype.html \
-  /Users/hongdazhu/Documents/ChatGPT/SpaceJudge/index-v1.html --force
-```
+直接在浏览器打开 `index-v1.html` 可体验 V1。
 
 也可以在此目录运行 `python3 -m http.server 8765 --bind 127.0.0.1`，打开 `http://127.0.0.1:8765/index.html`。
 

@@ -242,6 +242,24 @@ func openFileDescriptorCount() -> Int {
     (try? FileManager.default.contentsOfDirectory(atPath: "/dev/fd").count) ?? -1
 }
 
+/// Minimum file-descriptor count over a short settle window.
+///
+/// `/dev/fd` is process-global, so other parallel suites can transiently hold
+/// descriptors while this test samples. Taking the minimum across a short
+/// window removes those transients without hiding a real leak: a leaked
+/// descriptor stays open and is present in every sample.
+func settledFileDescriptorCount(
+    samples: Int = 12,
+    intervalMicroseconds: UInt64 = 10_000
+) -> Int {
+    var minimum = Int.max
+    for _ in 0..<max(1, samples) {
+        minimum = min(minimum, openFileDescriptorCount())
+        usleep(useconds_t(intervalMicroseconds))
+    }
+    return minimum == Int.max ? openFileDescriptorCount() : minimum
+}
+
 /// Cursor used by injected test enumerators. Each directory script is one
 /// step: a single final page, an explicit multi-page sequence, or a failure.
 final class ScriptedCursor: DirectoryCursor {
@@ -281,10 +299,17 @@ final class ScriptedCursor: DirectoryCursor {
     }
 }
 
+/// Names of leftover directory-spool files in a specific directory.
+///
+/// Scoping the count to one scan's own spool root keeps parallel test suites
+/// from polluting each other's assertions.
+func spoolFiles(in directory: URL) -> [String] {
+    let contents = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+    return contents.filter { $0.hasPrefix("spacejudge-spool-") }
+}
+
 /// Names of any leftover directory-spool files in the process temporary
 /// directory. Used to prove spool files are unlinked on every exit path.
 func spoolFilesInTemporaryDirectory() -> [String] {
-    let path = FileManager.default.temporaryDirectory.path
-    let contents = (try? FileManager.default.contentsOfDirectory(atPath: path)) ?? []
-    return contents.filter { $0.hasPrefix("spacejudge-spool-") }
+    spoolFiles(in: FileManager.default.temporaryDirectory)
 }

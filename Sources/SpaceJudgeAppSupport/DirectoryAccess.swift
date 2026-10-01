@@ -22,7 +22,8 @@ public struct DirectorySelection: Sendable, Equatable {
         }
     }
 
-    /// Runtime POSIX path handed to the scan engine. Never logged or stored.
+    /// Runtime POSIX path handed to the scan engine. Not persisted in SQLite.
+    /// Desktop cleanup handoff may include a derived target path after UI review.
     public var fileSystemPath: String { url.path }
 }
 
@@ -37,9 +38,17 @@ public struct DirectorySelection: Sendable, Equatable {
 public protocol DirectoryAccess: Sendable {
     /// Shows a single-directory picker. `nil` means the user cancelled.
     func pickDirectory() async -> DirectorySelection?
+    /// Suggests a location; the user must still confirm it in the system picker.
+    func pickDirectory(initialURL: URL?) async -> DirectorySelection?
     /// Starts access; the matching `stopAccess` must only be called when this
     /// returns `true`.
     func startAccess(for selection: DirectorySelection) -> Bool
     /// Stops a previously started access.
     func stopAccess(for selection: DirectorySelection)
+}
+
+public extension DirectoryAccess {
+    func pickDirectory(initialURL: URL?) async -> DirectorySelection? {
+        await pickDirectory()
+    }
 }

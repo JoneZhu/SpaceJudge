@@ -134,6 +134,50 @@ struct DirectoryAggregateBuilder {
         completed.contains(nodeID)
     }
 
+    /// Includes live descendants, without folding them into final buckets.
+    /// Iterative postorder avoids recursion/depth-per-file work. Completed
+    /// children are already folded, so they must not be visited twice.
+    func progressiveTotals(root: NodeID) throws -> [NodeID: Totals] {
+        var liveChildren: [NodeID: [NodeID]] = [:]
+        for (child, parent) in parentOf where !completed.contains(child) {
+            liveChildren[parent, default: []].append(child)
+        }
+        var totals: [NodeID: Totals] = [:]
+        var stack: [(NodeID, Bool)] = [(root, false)]
+        while let (node, visited) = stack.popLast() {
+            if visited {
+                var value = try currentTotals(of: node)
+                for child in liveChildren[node, default: []] {
+                    value = try value + totals[child, default: Totals()]
+                }
+                totals[node] = value
+            } else {
+                stack.append((node, true))
+                for child in liveChildren[node, default: []] {
+                    stack.append((child, false))
+                }
+            }
+        }
+        return totals
+    }
+
+    /// Releases the mutable working buckets for a directory whose final
+    /// aggregate has already been folded into its parent.
+    ///
+    /// This drops `direct`, `children` and `parentOf` for the node, so the
+    /// per-directory working storage no longer grows with the number of
+    /// completed directories. The lightweight `completed` set is intentionally
+    /// kept as the duplicate-completion guard.
+    ///
+    /// The caller must capture the node's parent (for the upward walk) before
+    /// calling this, and must never call it for the root: progress and the
+    /// terminal summary read the root's live totals.
+    mutating func retire(_ nodeID: NodeID) {
+        direct.removeValue(forKey: nodeID)
+        children.removeValue(forKey: nodeID)
+        parentOf.removeValue(forKey: nodeID)
+    }
+
     func parent(of nodeID: NodeID) -> NodeID? {
         parentOf[nodeID]
     }
