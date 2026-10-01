@@ -11,7 +11,7 @@
 #
 # Usage:
 #   scripts/release/verify-artifact.sh --dmg <path> --manifest <path> \
-#       [--mode local|release] [--repo <path>] [--app-name SpaceJudge]
+#       [--mode local|experimental|release] [--repo <path>] [--app-name SpaceJudge]
 
 set -euo pipefail
 
@@ -33,7 +33,7 @@ APP_NAME="SpaceJudge"
 
 usage() {
     cat <<'USAGE'
-Usage: verify-artifact.sh --dmg <path> --manifest <path> [--mode local|release]
+Usage: verify-artifact.sh --dmg <path> --manifest <path> [--mode local|experimental|release]
                           [--repo <path>] [--app-name SpaceJudge]
 USAGE
 }
@@ -52,7 +52,7 @@ done
 
 [ -n "$DMG" ] || { usage >&2; sj_die "--dmg is required"; }
 [ -n "$MANIFEST" ] || { usage >&2; sj_die "--manifest is required"; }
-case "$MODE" in local|release) : ;; *) sj_die "--mode must be local or release" ;; esac
+case "$MODE" in local|experimental|release) : ;; *) sj_die "--mode must be local, experimental or release" ;; esac
 sj_forbid_tool_overrides
 sj_require_absolute "dmg" "$DMG"
 [ -f "$DMG" ] || sj_die "DMG not found: $DMG"
@@ -79,7 +79,7 @@ MOUNT_POINT="$SJ_TEMP_DIR/mount"
 sj_attach_dmg "$DMG" "$MOUNT_POINT" >/dev/null
 sj_log "mounted $DMG at $MOUNT_POINT"
 
-sj_check_dmg_layout "$MOUNT_POINT" "$APP_NAME.app"
+sj_check_dmg_layout "$MOUNT_POINT" "$APP_NAME.app" "$MODE"
 APP="$MOUNT_POINT/$APP_NAME.app"
 [ -d "$APP" ] || sj_die "app bundle missing after mount"
 
@@ -93,6 +93,11 @@ sj_check_macho_inventory "$APP" "$EXECUTABLE" >/dev/null
 
 sj_bind_manifest "$MANIFEST" "$APP" "$MODE" "$ACTUAL_SHA" "$ARCHS"
 sj_log "manifest bound to DMG and bundle"
+if [ "$MODE" = "experimental" ]; then
+    sj_require_adhoc_signature "$APP"
+    sj_require_adhoc_signature "$APP/Contents/Helpers/spacejudge-agent-cli"
+    [ -f "$APP/Contents/Resources/LICENSE" ] || sj_die "experimental package must include its license"
+fi
 
 if [ -d "$REPO_DIR/App/SpaceJudge.xcodeproj" ]; then
     sj_check_version_consistency "$REPO_DIR" "$APP"

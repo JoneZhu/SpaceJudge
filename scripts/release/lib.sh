@@ -495,6 +495,12 @@ sj_require_strict_verify() {
         || sj_die "codesign --verify --strict failed: $target"
 }
 
+sj_require_adhoc_signature() {
+    local info
+    info="$(sj_codesign -d --verbose=4 "$1" 2>&1)" || sj_die "could not inspect ad-hoc signature"
+    printf '%s\n' "$info" | grep -q '^Signature=adhoc$' || sj_die "experimental build must have an ad-hoc signature"
+}
+
 sj_dump_entitlements() {
     local target="$1" out="$2"
     if ! sj_codesign -d --entitlements :- "$target" >"$out" 2>/dev/null; then
@@ -627,7 +633,7 @@ sj_manifest_value() {
 }
 
 # Binds a manifest to the DMG hash, the mounted app bundle and the mode.
-# mode is `local` or `release`.
+# mode is `local`, `experimental` or `release`.
 sj_bind_manifest() {
     local manifest="$1" app="$2" mode="$3" expected_sha="$4" expected_archs="$5"
     [ -f "$manifest" ] || sj_die "manifest missing: $manifest"
@@ -658,6 +664,27 @@ sj_bind_manifest() {
     [ "$m_arch" = "$expected_archs" ] || sj_die "manifest architectures '$m_arch' != actual '$expected_archs'"
 
     case "$mode" in
+        experimental)
+            [ "$(sj_manifest_value "$manifest" kind)" = "experimental-adhoc" ] || sj_die "experimental kind mismatch"
+            [ "$(sj_manifest_value "$manifest" audience)" = "opt-in-testers" ] || sj_die "experimental audience mismatch"
+            [ "$(sj_manifest_value "$manifest" distributionReady)" = "false" ] || sj_die "test build cannot claim distributionReady=true"
+            [ "$(sj_manifest_value "$manifest" signingIdentity)" = "ad-hoc" ] || sj_die "test signing identity mismatch"
+            [ "$(sj_manifest_value "$manifest" notarizationStatus)" = "not-submitted" ] || sj_die "test build cannot claim notarization"
+            [ "$(sj_manifest_value "$manifest" gitState)" = "clean" ] || sj_die "experimental build must use clean source"
+            local commit helper notice
+            commit="$(sj_manifest_value "$manifest" gitCommit)"
+            [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || sj_die "test build requires a 40-hex source commit"
+            [ "$(sj_bundle_value "$app" SpaceJudgeReleaseChannel)" = "experimental" ] || sj_die "missing signed experimental bundle marker"
+            [ "$(sj_bundle_value "$app" SpaceJudgeSourceCommit)" = "$commit" ] || sj_die "bundle source commit mismatch"
+            helper="$(sj_manifest_value "$manifest" bundledCLI)"
+            [ "$helper" = "Contents/Helpers/spacejudge-agent-cli" ] || sj_die "experimental CLI path mismatch"
+            [ -d "$app/Contents/Helpers" ] && [ ! -L "$app/Contents/Helpers" ] \
+                && [ -f "$app/$helper" ] && [ ! -L "$app/$helper" ] || sj_die "experimental CLI must be a real bundled file"
+            [ "$(sj_sha256 "$app/$helper")" = "$(sj_manifest_value "$manifest" bundledCLISHA256)" ] || sj_die "CLI hash mismatch"
+            notice="$app/Contents/Resources/TESTING-README.txt"
+            [ -f "$notice" ] && [ ! -L "$notice" ] || sj_die "missing bundled testing notice"
+            [ "$(sj_sha256 "$notice")" = "$(sj_manifest_value "$manifest" testingNoticeSHA256)" ] || sj_die "testing notice hash mismatch"
+            ;;
         local)
             [ "$(sj_manifest_value "$manifest" kind)" = "local-adhoc" ] || sj_die "local manifest kind must be local-adhoc"
             [ "$(sj_manifest_value "$manifest" distributionReady)" = "false" ] || sj_die "local manifest must have distributionReady=false"
@@ -766,13 +793,19 @@ sj_detach_dmg_strict() {
 # symlink) and the Applications symlink pointing precisely at /Applications.
 # No other (including hidden) payload is accepted.
 sj_check_dmg_layout() {
-    local mountpoint="$1" app_name="$2"
+    local mountpoint="$1" app_name="$2" mode="${3:-local}"
+    case "$mode" in local|experimental|release) : ;; *) sj_die "unknown layout mode" ;; esac
     local entry base unexpected=""
     while IFS= read -r entry; do
         [ -n "$entry" ] || continue
         base="$(basename "$entry")"
         case "$base" in
             "$app_name"|"Applications") : ;;
+            "TESTING-README.txt")
+                if [ "$mode" != "experimental" ]; then
+                    unexpected="${unexpected}${base}"$'\n'
+                fi
+                ;;
             *) unexpected="${unexpected}${base}"$'\n' ;;
         esac
     done < <(find "$mountpoint" -mindepth 1 -maxdepth 1 -print 2>/dev/null)
@@ -782,6 +815,14 @@ sj_check_dmg_layout() {
     [ -L "$mountpoint/Applications" ] || sj_die "DMG root does not contain an Applications symlink"
     [ "$(readlink "$mountpoint/Applications")" = "/Applications" ] \
         || sj_die "DMG Applications symlink must point exactly at /Applications"
+    if [ "$mode" = "experimental" ]; then
+        local notice="$mountpoint/TESTING-README.txt"
+        [ -f "$notice" ] && [ ! -L "$notice" ] || sj_die "experimental DMG needs a real testing notice"
+        cmp -s "$notice" "$mountpoint/$app_name/Contents/Resources/TESTING-README.txt" \
+            || sj_die "DMG notice differs from signed bundle notice"
+        grep -q 'NOT NOTARIZED / 未经过 Apple 公证' "$notice" || sj_die "missing unnotarized warning"
+        grep -q 'EXPERIMENTAL TEST BUILD' "$notice" || sj_die "missing experimental warning"
+    fi
     if [ -n "$unexpected" ]; then
         sj_warn "unexpected DMG root entries:"
         printf '%s' "$unexpected" >&2

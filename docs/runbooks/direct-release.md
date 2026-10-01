@@ -1,5 +1,7 @@
 # Runbook: SpaceJudge 直接分发
 
+2026-10-01 补充：当前产品先走开源源码＋自愿测试版，见[实验性测试包](experimental-build.md)。本 runbook 的 Developer ID 正式分发门不因此放宽；原本 local candidate 仍不可改名发布。
+
 状态：Phase 5D-A 发布工程就绪（等待 Developer ID、notary profile 与干净 commit 后进入 5D-B）。
 适用：[Phase 5D 设计](../22-phase-5d-design.md)、[ADR-0010](../adr/0010-developer-id-dmg-release.md)。
 

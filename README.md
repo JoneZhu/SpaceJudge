@@ -20,6 +20,7 @@ CLI：`swift build -c release --product spacejudge-agent-cli`，然后运行 `.b
 可选 MCP 的构建、授权根和客户端配置见[本地 Agent runbook](docs/runbooks/local-agent-mcp.md)。
 
 源码公开不等于已发布正式 DMG：当前测试安装包未完成 Developer ID 签名、公证与其他 Mac 的安装验收。
+现阶段采用“开源源码＋自愿测试版”，不要求购买证书；测试 DMG 的构建、校验、安装与风险见[测试版说明](docs/runbooks/experimental-build.md)。
 本机安装包、日志、扫描快照和个人清理记录不纳入源码仓库；历史验收中的本机路径已匿名化，`output/` 证据链接仅在原验收机器上可用。
 
 原生实现的产品规格、扫描内核、数据口径、测试门槛和 Pi 协作流程见 [工程文档](docs/README.md)。HTML 文件是交互原型，不代表原生扫描性能。

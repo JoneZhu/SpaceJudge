@@ -24,15 +24,19 @@ OUTPUT_DIR=""
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 KEEP_WORK=0
 WITH_CLI=0
+EXPERIMENTAL=0
+GIT_COMMIT=""
 
 usage() {
     cat <<'USAGE'
-Usage: local-candidate.sh --output-dir <absolute-dir> [--repo <path>] [--keep-work] [--with-cli]
+Usage: local-candidate.sh --output-dir <absolute-dir> [--repo <path>] [--keep-work] [--with-cli] [--experimental]
 
   --output-dir   Absolute directory that must not exist or must be empty.
   --repo         Repository root (defaults to the parent of scripts/release).
   --keep-work    Keep the task temp build directory for inspection.
   --with-cli     Build and explicitly sign a universal SpaceJudge CLI helper.
+  --experimental Opt-in test-sharing package, NOT notarized or production-ready.
+                 Requires a clean Git HEAD; always includes CLI and test notice.
 USAGE
 }
 
@@ -56,6 +60,11 @@ while [ "$#" -gt 0 ]; do
             WITH_CLI=1
             shift
             ;;
+        --experimental)
+            EXPERIMENTAL=1
+            WITH_CLI=1
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -67,6 +76,9 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$OUTPUT_DIR" ] || { usage >&2; sj_die "--output-dir is required"; }
+if [ "$EXPERIMENTAL" -eq 1 ]; then
+    sj_forbid_tool_overrides
+fi
 
 sj_require_cmd xcodebuild
 sj_require_cmd codesign
@@ -78,6 +90,9 @@ sj_assert_new_output_dir "$OUTPUT_DIR"
 
 [ -d "$REPO_DIR/App/SpaceJudge.xcodeproj" ] || sj_die "Xcode project not found under: $REPO_DIR"
 sj_validate_source_metadata "$REPO_DIR"
+if [ "$EXPERIMENTAL" -eq 1 ]; then
+    GIT_COMMIT="$(sj_git_ready "$REPO_DIR")"
+fi
 
 MOUNT_POINT=""
 cleanup() {
@@ -149,6 +164,16 @@ fi
 sj_log "validating version consistency"
 sj_check_version_consistency "$REPO_DIR" "$WORK_APP"
 
+if [ "$EXPERIMENTAL" -eq 1 ]; then
+    # Stamp only the fresh staging bundle, before signing. Never relabel an
+    # existing local candidate or modify the installed application.
+    /usr/libexec/PlistBuddy -c 'Add :SpaceJudgeReleaseChannel string experimental' "$WORK_APP/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Add :SpaceJudgeSourceCommit string $GIT_COMMIT" "$WORK_APP/Contents/Info.plist"
+    cp "$REPO_DIR/scripts/release/TESTING-README.txt" "$WORK_APP/Contents/Resources/TESTING-README.txt"
+    cp "$REPO_DIR/LICENSE" "$WORK_APP/Contents/Resources/LICENSE"
+    cp "$REPO_DIR/scripts/release/TESTING-README.txt" "$WORK_DIR/staging/TESTING-README.txt"
+fi
+
 sj_log "applying ad-hoc Hardened Runtime signature"
 if ! sj_codesign --force --options runtime --timestamp=none --sign - "$WORK_APP" >"$LOG_DIR/codesign-adhoc.log" 2>&1; then
     cat "$LOG_DIR/codesign-adhoc.log" >&2 || true
@@ -171,14 +196,22 @@ sj_check_macho_inventory "$WORK_APP" "$SJ_EXECUTABLE_NAME" >/dev/null
 
 sj_log "building local DMG"
 BASE="SpaceJudge-${SJ_VERSION}-${SJ_BUILD}-universal-LOCAL-ADHOC-NOT-FOR-DISTRIBUTION"
+VERIFY_MODE="local"
+VOLUME_NAME="$APP_NAME"
+if [ "$EXPERIMENTAL" -eq 1 ]; then
+    BASE="SpaceJudge-${SJ_VERSION}-${SJ_BUILD}-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED"
+    VERIFY_MODE="experimental"
+    VOLUME_NAME="SpaceJudge TEST ONLY"
+    [ "$(sj_git_ready "$REPO_DIR")" = "$GIT_COMMIT" ] || sj_die "source changed during experimental build"
+fi
 DMG="$OUTPUT_DIR/$BASE.dmg"
 ln -s /Applications "$WORK_DIR/staging/Applications"
-sj_create_dmg "$WORK_DIR/staging" "$DMG" "$APP_NAME"
+sj_create_dmg "$WORK_DIR/staging" "$DMG" "$VOLUME_NAME"
 
 sj_log "inspecting mounted DMG layout"
 MOUNT_POINT="$WORK_DIR/mount"
 sj_attach_dmg "$DMG" "$MOUNT_POINT" >/dev/null
-sj_check_dmg_layout "$MOUNT_POINT" "$APP_NAME.app"
+sj_check_dmg_layout "$MOUNT_POINT" "$APP_NAME.app" "$VERIFY_MODE"
 sj_require_strict_verify "$MOUNT_POINT/$APP_NAME.app"
 sj_require_runtime_flag "$MOUNT_POINT/$APP_NAME.app"
 sj_detach_dmg_strict "$MOUNT_POINT"
@@ -196,7 +229,14 @@ sj_manifest_add_string build "$SJ_BUILD"
 sj_manifest_add_string bundleID "$SJ_BUNDLE_ID"
 sj_manifest_add_string minimumSystemVersion "$SJ_MIN_OS"
 sj_manifest_add_string architectures "$ARCHS"
-sj_manifest_add_string kind "local-adhoc"
+if [ "$EXPERIMENTAL" -eq 1 ]; then
+    sj_manifest_add_string kind "experimental-adhoc"
+    sj_manifest_add_string audience "opt-in-testers"
+    sj_manifest_add_string gitCommit "$GIT_COMMIT"
+    sj_manifest_add_string testingNoticeSHA256 "$(sj_sha256 "$WORK_DIR/staging/TESTING-README.txt")"
+else
+    sj_manifest_add_string kind "local-adhoc"
+fi
 sj_manifest_add_bool distributionReady "false"
 sj_manifest_add_string signingIdentity "ad-hoc"
 sj_manifest_add_string notarizationStatus "not-submitted"
@@ -215,6 +255,9 @@ cp "$LOG_DIR"/*.log "$OUTPUT_DIR/logs/" 2>/dev/null || true
 sj_secure_files_no_group_write "$OUTPUT_DIR/logs"
 
 sj_log "local candidate complete"
+if [ "$EXPERIMENTAL" -eq 1 ]; then
+    sj_warn "OPT-IN TESTING ONLY: not notarized; default Gatekeeper acceptance is NOT claimed"
+fi
 cat >&2 <<SUMMARY
 output-dir:  $OUTPUT_DIR
 dmg:         $DMG

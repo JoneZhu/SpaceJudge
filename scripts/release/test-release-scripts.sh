@@ -116,6 +116,13 @@ exit 0
 STUB
 chmod +x "$STUB_DIR/codesign-entitlements"
 
+cat > "$STUB_DIR/codesign-signature" <<'STUB'
+#!/bin/bash
+printf '%s\n' "${SJ_STUB_SIGNATURE:-Signature=adhoc}" >&2
+exit "${SJ_STUB_SIGNATURE_RC:-0}"
+STUB
+chmod +x "$STUB_DIR/codesign-signature"
+
 # ---------------------------------------------------------------------------
 # 1. Output directory safety
 # ---------------------------------------------------------------------------
@@ -347,6 +354,28 @@ expect_fail "Applications symlink to wrong target rejected" sj_check_dmg_layout 
 rm -f "$LAYOUT/Applications" "$LAYOUT/evil"
 ln -s /Applications "$LAYOUT/Applications"
 
+NOTICE_SOURCE="$SCRIPT_DIR/TESTING-README.txt"
+expect_fail "experimental layout rejects a missing notice" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
+mkdir -p "$LAYOUT/SpaceJudge.app/Contents/Resources"
+cp "$NOTICE_SOURCE" "$LAYOUT/TESTING-README.txt"
+cp "$NOTICE_SOURCE" "$LAYOUT/SpaceJudge.app/Contents/Resources/TESTING-README.txt"
+expect_pass "experimental layout accepts a bound notice" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
+expect_fail "local layout cannot accept experimental payload" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" local
+expect_fail "release layout cannot accept experimental payload" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" release
+printf 'changed\n' >> "$LAYOUT/TESTING-README.txt"
+expect_fail "experimental layout rejects different notices" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
+rm -f "$LAYOUT/TESTING-README.txt"
+ln -s "$NOTICE_SOURCE" "$LAYOUT/TESTING-README.txt"
+expect_fail "experimental layout rejects a notice symlink" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
+rm -f "$LAYOUT/TESTING-README.txt"
+expect_fail "layout rejects an unknown mode" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" other
+
+SJ_CODESIGN_BIN="$STUB_DIR/codesign-signature" expect_pass "ad-hoc signature label accepted" sj_require_adhoc_signature "$GOOD_APP"
+SJ_CODESIGN_BIN="$STUB_DIR/codesign-signature" SJ_STUB_SIGNATURE='Authority=Developer ID Application' \
+    expect_fail "experimental cannot accept Developer ID label" sj_require_adhoc_signature "$GOOD_APP"
+SJ_CODESIGN_BIN="$STUB_DIR/codesign-signature" SJ_STUB_SIGNATURE_RC=1 \
+    expect_fail "ad-hoc signature inspection failure rejects" sj_require_adhoc_signature "$GOOD_APP"
+
 # ---------------------------------------------------------------------------
 # 11. Checksum sidecar binding
 # ---------------------------------------------------------------------------
@@ -385,6 +414,49 @@ expect_pass "local manifest binding passes" sj_bind_manifest "$LOCAL_MANIFEST" "
 expect_fail "manifest sha mismatch rejected" sj_bind_manifest "$LOCAL_MANIFEST" "$BIND_APP" local "different" "arm64 x86_64"
 expect_fail "manifest ready=true in local mode rejected" sj_bind_manifest "$LOCAL_MANIFEST" "$BIND_APP" release "abc123" "arm64 x86_64"
 
+EXPERIMENTAL_MANIFEST="$TEST_DIR/experimental.json"
+mkdir -p "$BIND_APP/Contents/Helpers" "$BIND_APP/Contents/Resources"
+printf 'synthetic-cli' > "$BIND_APP/Contents/Helpers/spacejudge-agent-cli"
+cp "$NOTICE_SOURCE" "$BIND_APP/Contents/Resources/TESTING-README.txt"
+/usr/libexec/PlistBuddy -c 'Add :SpaceJudgeReleaseChannel string experimental' "$BIND_APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Add :SpaceJudgeSourceCommit string 0123456789abcdef0123456789abcdef01234567' "$BIND_APP/Contents/Info.plist"
+cat > "$EXPERIMENTAL_MANIFEST" <<JSON
+{
+  "product": "Bind", "version": "0.3.0", "build": "3",
+  "bundleID": "com.hongdazhu.SpaceJudge", "minimumSystemVersion": "14.0",
+  "architectures": "arm64 x86_64", "kind": "experimental-adhoc",
+  "audience": "opt-in-testers", "distributionReady": false,
+  "signingIdentity": "ad-hoc", "notarizationStatus": "not-submitted",
+  "gitState": "clean", "gitCommit": "0123456789abcdef0123456789abcdef01234567",
+  "bundledCLI": "Contents/Helpers/spacejudge-agent-cli",
+  "bundledCLISHA256": "$(sj_sha256 "$BIND_APP/Contents/Helpers/spacejudge-agent-cli")",
+  "testingNoticeSHA256": "$(sj_sha256 "$BIND_APP/Contents/Resources/TESTING-README.txt")",
+  "sha256": "abc123"
+}
+JSON
+expect_pass "experimental manifest binds bundle markers, CLI and notice" sj_bind_manifest "$EXPERIMENTAL_MANIFEST" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+expect_fail "experimental manifest cannot pass release mode" sj_bind_manifest "$EXPERIMENTAL_MANIFEST" "$BIND_APP" release "abc123" "arm64 x86_64"
+expect_fail "experimental manifest cannot pass local mode" sj_bind_manifest "$EXPERIMENTAL_MANIFEST" "$BIND_APP" local "abc123" "arm64 x86_64"
+for pair in 'distributionReady true' 'notarizationStatus Accepted' 'gitState dirty' 'gitCommit short' 'audience everyone' 'kind local-adhoc' 'signingIdentity developer-id' 'bundledCLI other'; do
+    read -r key value <<< "$pair"
+    cp "$EXPERIMENTAL_MANIFEST" "$TEST_DIR/experimental-invalid.json"
+    plutil -replace "$key" -string "$value" "$TEST_DIR/experimental-invalid.json"
+    expect_fail "experimental manifest rejects $key=$value" sj_bind_manifest "$TEST_DIR/experimental-invalid.json" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+done
+printf 'tampered' >> "$BIND_APP/Contents/Helpers/spacejudge-agent-cli"
+expect_fail "experimental manifest rejects a changed CLI" sj_bind_manifest "$EXPERIMENTAL_MANIFEST" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+printf 'synthetic-cli' > "$BIND_APP/Contents/Helpers/spacejudge-agent-cli"
+mv "$BIND_APP/Contents/Helpers/spacejudge-agent-cli" "$TEST_DIR/symlink-target-cli"
+ln -s "$TEST_DIR/symlink-target-cli" "$BIND_APP/Contents/Helpers/spacejudge-agent-cli"
+expect_fail "experimental manifest rejects symlinked helper with matching hash" sj_bind_manifest "$EXPERIMENTAL_MANIFEST" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+rm -f "$BIND_APP/Contents/Helpers/spacejudge-agent-cli"
+mv "$TEST_DIR/symlink-target-cli" "$BIND_APP/Contents/Helpers/spacejudge-agent-cli"
+printf 'tampered' >> "$BIND_APP/Contents/Resources/TESTING-README.txt"
+expect_fail "experimental manifest rejects a changed notice" sj_bind_manifest "$EXPERIMENTAL_MANIFEST" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+cp "$NOTICE_SOURCE" "$BIND_APP/Contents/Resources/TESTING-README.txt"
+/usr/libexec/PlistBuddy -c 'Set :SpaceJudgeReleaseChannel release' "$BIND_APP/Contents/Info.plist"
+expect_fail "experimental manifest rejects missing test channel" sj_bind_manifest "$EXPERIMENTAL_MANIFEST" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+
 RELEASE_MANIFEST="$TEST_DIR/release.json"
 cat > "$RELEASE_MANIFEST" <<'JSON'
 {
@@ -411,6 +483,7 @@ unset SJ_SECURITY_BIN SJ_STAPLER_BIN SJ_SPCTL_BIN SJ_NOTARYTOOL_BIN SJ_LIPO_BIN 
 DIST="$SCRIPT_DIR/distribute.sh"
 VERIFY="$SCRIPT_DIR/verify-artifact.sh"
 REAL_REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SJ_CODESIGN_BIN="$ENT_STUB" expect_fail "experimental entry rejects test tool overrides" "$SCRIPT_DIR/local-candidate.sh" --experimental --output-dir "$TEST_DIR/experimental-out"
 
 expect_fail "missing --release rejected" "$DIST" --output-dir "$TEST_DIR/preflight-out" \
     --identity "Developer ID Application: Nobody (NONE000000)" --keychain-profile test
