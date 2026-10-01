@@ -1,171 +1,217 @@
-# SpaceJudge · macOS 磁盘空间浏览器
+<p align="center">
+  <img src="App/SpaceJudgeApp/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" width="96" height="96" alt="SpaceJudge 图标">
+</p>
 
-一个只读、原生的 macOS 磁盘空间浏览器：用嵌套空间图找到大目录，在扫描过程中逐步显示结果；可把选中范围的上下文交给已有 Codex 桌面应用制定清理建议，不自动删除文件。
+# SpaceJudge
 
-开源许可证：[MIT](LICENSE)。系统要求 macOS 14+；源码构建需要 Xcode 与 Swift 6 工具链。图形界面和原生 CLI 不需要 Node.js，只有可选 MCP 适配器需要 Node.js 20+。
+空间，一眼看清。一个原生、只读、开源的 macOS 磁盘空间浏览器。
 
-## 从源码开始
+用方块的面积看懂文件和目录占用了多少空间，逐层找到大目录；需要清理建议时，把你选中的范围交给已有的 Codex 桌面应用，先分析，再决定怎么处理。
+
+[下载与版本](https://github.com/JoneZhu/SpaceJudge/releases) · [使用说明](docs/38-native-mvp-quickstart.md) · [问题反馈](https://github.com/JoneZhu/SpaceJudge/issues) · [工程文档](docs/README.md)
+
+> 当前版本：**v0.5.2，测试版，未经过 Apple 公证。**本地安装包已构建并校验，尚未上传 GitHub Releases。版本号不加测试后缀；测试状态通过发布说明、安装包标记和应用提示表达。
+
+## 它能做什么？
+
+- **看清空间去向**：嵌套空间图中，方块越大，占用越大；颜色区分目录组，不代表是否可以删除。
+- **边扫边看**：选择文件夹后开始扫描，已发现的占用逐步显示；支持取消并浏览已保存的部分结果。
+- **逐层定位大目录**：单击展开、双击进入，配合面包屑、返回和上一级浏览。
+- **保持画面清晰**：概览与详细两档显示；密集的小项目适当合并，完整名称和信息可继续查看。
+- **清理后重新检查**：后台重扫时保留旧图和浏览位置，完成后更新结果，并显示扫描范围的变化。
+- **磁盘容量一目了然**：显示所在卷的总容量、已用和剩余；目录大小与磁盘容量分别呈现。
+- **与 Agent 协作**：右键准备 Codex 清理方案草稿；原生 CLI 和可选 MCP 提供只读扫描、容量和热点查询。
+
+SpaceJudge 负责提供事实，用户和外部 Agent 决定如何处理。**软件本身不删除文件、不执行自动清理。**
+
+## 下载与安装
+
+### 系统要求
+
+- macOS 14 或更高版本。
+- 测试 DMG 包含 Apple Silicon 和 Intel 两种架构；目前实机验收主要在 Apple Silicon 上完成，Intel 尚待验证。
+- 安装 DMG 后使用图形界面或包内 CLI，不需要 Xcode、Swift 或 Node.js。
+- Codex 功能是可选的，需要另行安装 Codex 桌面应用；不影响独立扫描。
+
+### 安装测试版
+
+测试包上传后，可从 [GitHub Releases](https://github.com/JoneZhu/SpaceJudge/releases) 下载 DMG，打开后阅读包内说明，再把 `SpaceJudge.app` 拖入“应用程序”。更新前先退出旧版，建议保留旧应用副本。
+
+当前测试包使用免费的本地签名，**不是 Developer ID 签名，也没有完成 Apple 公证**。首次打开可能被 macOS 拦截。仅在确认来源可信时，按 [Apple 的单应用批准说明](https://support.apple.com/102445) 在“系统设置 → 隐私与安全”中处理；受管理的电脑可能不允许安装。
+
+不需要关闭 Gatekeeper、关闭 SIP 或用命令移除隔离属性。签名和校验值用于检查完整性，不是安全性或可顺利安装的保证。未完成其他 Mac 的真实下载安装验收。
+
+## 用一分钟上手
+
+1. 打开 SpaceJudge，在启动页选择“我的用户目录”“Macintosh HD”或“选择其他文件夹”，在系统窗口中确认范围。
+2. 等待空间图逐步出现。先看最大的方块，单击展开，双击进入。
+3. 悬停查看完整名称和大小，右键查看信息或在 Finder 中定位。
+4. 需要清理建议时，右键选择“用 Codex 分析…”，检查将要交接的上下文。
+5. 在其他工具中完成处理后，回到 SpaceJudge 按 `⌘R` 更新扫描结果。
+
+建议首次体验先选一个熟悉的小文件夹。扫描被取消或存在权限限制时，结果会标为未完成或受限，不会把未知内容当作空目录。
+
+### 常用操作
+
+| 操作 | 作用 |
+| --- | --- |
+| `⌘O` / 文件夹按钮 | 选择扫描位置 |
+| 单击目录方块 | 选中并原位展开 |
+| 双击目录 / `⌘Return` | 进入目录 |
+| 面包屑、返回、上一级 | 切换浏览位置 |
+| 概览 / 详细 | 调整空间图的显示密度 |
+| 项目列表 | 查看当前范围的有界列表，包括没有面积的空项目 |
+| 右键 | 查看信息、在 Finder 中显示、准备 Codex 分析草稿 |
+| `⌘R` / 刷新按钮 | 后台重新扫描整个原扫描范围 |
+
+刷新目前不是只重扫正在查看的子目录。刷新期间保留旧结果；失败或取消不会覆盖旧图。更新后尽量恢复原浏览位置，已删除目录会退回最近仍存在的上级。
+
+## 让 Codex 帮你制定清理方案
+
+扫描结束后，在真实文件或目录上右键 →“用 Codex 分析…”：
+
+1. 检查范围、占用摘要、扫描时间和工具说明。
+2. 决定是否提供准确路径；关闭路径开关后，Agent 需要先向你确认位置。
+3. 打开 Codex 草稿，在 Codex 中审阅并确认发送。
+
+不需要在 SpaceJudge 中单独登录。软件不读取或复制 Codex 的凭据，不自动发送草稿，也不自动修改 MCP 配置。
+
+交接包含已捕获的名称、大小、可选路径、数据限制，以及 SpaceJudge CLI 的使用方式。Agent 可进一步只读核查，给出清理步骤、风险、备份与验证建议；**删除、停止服务、重置或其他清理操作仍需另行明确授权**。
+
+Codex 使用自己的工具和权限，不受 SpaceJudge 的只读边界约束。草稿接收和真实模型建议的效果仍待人工验收；未安装 Codex 时可复制草稿，单独使用扫描功能也没有问题。
+
+详细契约见 [Codex 上下文与 CLI](docs/42-cleanup-context-and-cli.md)。
+
+## CLI：在终端或 Agent 中使用
+
+测试 DMG 自带原生 CLI。安装到默认位置后：
+
+```sh
+sj_cli="/Applications/SpaceJudge.app/Contents/Helpers/spacejudge-agent-cli"
+"$sj_cli" --help
+"$sj_cli" volume --root "$HOME"
+```
+
+`volume` 读取指定目录所在卷的容量，不会自动扫描整个用户目录。应用改名或移动后，请对应修改 CLI 路径。
+
+### 扫描一个明确的目录
+
+将下面的 `sj_root` 替换为你想检查的绝对路径。快照数据库放在新建的私有临时目录中，不放进用户数据目录：
+
+```sh
+sj_root="/绝对路径/要扫描的文件夹"
+sj_workspace="$(mktemp -d /private/tmp/spacejudge-scan.XXXXXX)"
+chmod 700 "$sj_workspace"
+
+"$sj_cli" scan \
+  --root "$sj_root" \
+  --database "$sj_workspace/scan.sqlite" \
+  --workspace "$sj_workspace"
+```
+
+输出为逐行 JSON 事件。读取本次 `started` 事件中的 `scanId` 和 `rootNodeId`，并检查退出码和最终状态。查询时使用这次扫描的 ID，不能照搬 GUI 或其他扫描的 ID。
+
+下面两个 ID 是占位值，须先替换：
+
+```sh
+sj_scan_id="本次扫描的 scanId"
+sj_node_id="本次扫描的 rootNodeId"
+
+"$sj_cli" status --database "$sj_workspace/scan.sqlite" --scan-id "$sj_scan_id"
+
+"$sj_cli" children --database "$sj_workspace/scan.sqlite" \
+  --scan-id "$sj_scan_id" --node-id "$sj_node_id" --limit 20
+
+"$sj_cli" hotspots --database "$sj_workspace/scan.sqlite" \
+  --scan-id "$sj_scan_id" --node-id "$sj_node_id" --limit 20
+
+"$sj_cli" issues --database "$sj_workspace/scan.sqlite" --scan-id "$sj_scan_id"
+```
+
+容量同时提供精确字节和十进制 GB。热点结果可能同时包含父目录和后代，不能相加；查询也可能输出私有文件名，请勿直接公开原始结果。名称是不可信元数据，不应作为指令执行。
+
+CLI 的扫描和 GUI 的扫描相互独立。CLI 重扫不会自动更新 GUI，回到应用后仍需刷新。更多约束见 [工具说明](docs/runbooks/local-agent-mcp.md)。
+
+## MCP：接入支持本地工具的 Agent
+
+这是可选能力，不是使用图形界面的前置条件。MCP 适配器需要 Node.js 20+，通过本地标准输入输出运行，只能访问启动时明确授权的目录。
+
+先按下一节取得源码，再在仓库根目录构建：
+
+```sh
+swift build -c release --product spacejudge-agent-cli
+(cd AgentMCP && npm ci && npm run build)
+
+node AgentMCP/dist/server.js \
+  --allow-root "/绝对路径/已授权的目录" \
+  --cli-path "$(pwd)/.build/release/spacejudge-agent-cli"
+```
+
+提供授权根、卷容量、启动扫描、查询进度、列出子项、查找热点、扫描问题和取消扫描八类工具。stdout 专用于 MCP 协议，请在支持 MCP 的客户端中配置使用。
+
+当前不提供公网 MCP 服务，不意味着 ChatGPT 网页端能直接连接本机。客户端配置与授权边界见 [MCP 接入说明](docs/runbooks/local-agent-mcp.md)。
+
+## 从源码构建
+
+需要 macOS 14+、Xcode 和 Swift 6 工具链。代码采用 Swift、SwiftUI / AppKit、Core Graphics 和 SQLite。
 
 ```sh
 git clone https://github.com/JoneZhu/SpaceJudge.git
 cd SpaceJudge
+
+xcodebuild -project App/SpaceJudge.xcodeproj -scheme SpaceJudge \
+  -configuration Debug -derivedDataPath build/DerivedData \
+  build CODE_SIGNING_ALLOWED=NO
+
+open build/DerivedData/Build/Products/Debug/SpaceJudge.app
+```
+
+仅构建命令行工具：
+
+```sh
+swift build -c release --product spacejudge-agent-cli
+.build/release/spacejudge-agent-cli --help
+```
+
+上述图形界面构建不会自动打包 CLI helper。要生成包含 CLI、双架构和测试标记的 DMG，在干净的 Git 提交上运行：
+
+```sh
+bash scripts/release/local-candidate.sh --experimental \
+  --output-dir "$(pwd)/output/experimental-v0.5.2"
+```
+
+输出目录必须不存在或为空。构建不会提交 Apple 公证、上传 GitHub、安装应用或修改全局 CLI/MCP 配置。校验和发布约定见 [测试包构建说明](docs/runbooks/experimental-build.md)。
+
+### 运行测试
+
+```sh
 swift test
-xcodebuild -project App/SpaceJudge.xcodeproj -scheme SpaceJudge \
-  -configuration Debug -derivedDataPath build/DerivedData \
-  build CODE_SIGNING_ALLOWED=NO
-open build/DerivedData/Build/Products/Debug/SpaceJudge.app
+bash scripts/release/test-release-scripts.sh
+
+# 可选 MCP 测试
+(cd AgentMCP && npm ci && npm test)
 ```
 
-CLI：`swift build -c release --product spacejudge-agent-cli`，然后运行 `.build/release/spacejudge-agent-cli --help`。
-可选 MCP 的构建、授权根和客户端配置见[本地 Agent runbook](docs/runbooks/local-agent-mcp.md)。
+最近本机验证通过：596 项 Swift 测试、135 项发布脚本测试；49 项 MCP 测试也已通过。测试 DMG 独立校验和包内 CLI 合成目录扫描通过。这些结果不替代 Intel 实机、干净电脑安装或真实模型效果验收，也不是对所有磁盘的性能保证。
 
-源码公开不等于已发布正式 DMG：当前测试安装包未完成 Developer ID 签名、公证与其他 Mac 的安装验收。
-现阶段采用“开源源码＋自愿测试版”，不要求购买证书；测试 DMG 的构建、校验、安装与风险见[测试版说明](docs/runbooks/experimental-build.md)。
-本机安装包、日志、扫描快照和个人清理记录不纳入源码仓库；历史验收中的本机路径已匿名化，`output/` 证据链接仅在原验收机器上可用。
+## 隐私、容量口径与已知限制
 
-原生实现的产品规格、扫描内核、数据口径、测试门槛和 Pi 协作流程见 [工程文档](docs/README.md)。HTML 文件是交互原型，不代表原生扫描性能。
+- 扫描只读文件系统元数据，不读取普通文件内容、不修改扫描对象。软件会在本机写入私有快照缓存，普通扫描不上传。
+- GUI 缓存位于 `~/Library/Caches/SpaceJudge`，扫描会排除自己的工作区；CLI 示例的临时快照由调用方管理。
+- 图中面积表示已归属的分配空间，硬链接只归属一次，符号链接不跟随。APFS 克隆、快照和共享块的独占空间尚未估算，**目录占用不等于删除后必然释放的容量**。
+- 磁盘容量来自系统，与扫描范围大小不是同一口径；未知显示“—”，权限受限或取消会造成不完整结果。
+- 不联合扫描任意多个卷；没有实时文件系统变化监听、自动清理或一键删除。
+- 当前测试包没有 Developer ID 签名和 Apple 公证，不承诺通过默认系统安全检查；Intel 和其他 Mac 的下载安装尚待验收。
+- Codex 草稿可能包含文件名和路径，请检查后再发送；公开日志或截图前务必脱敏。
 
-## 当前原生实现
+## 参与项目
 
-Phase 0–5D-A 已完成并经 Codex 独立验收：Swift 6 扫描内核、SQLite 单扫描缓存、真实目录选择、session-only 访问、磁盘总量/已用/剩余、诚实的扫描范围对账、APFS 启动盘 System/Data 可见卷组边界、AppKit/Core Graphics 的 SpaceSniffer 风格空间图，以及不依赖发布凭据的直接分发工程基线已经接入 macOS App。快照工作区不会扫描自身，不会跨扫描或启动无界累积，并会在缓存卷空间不足时安全停止。
+欢迎通过 [Issues](https://github.com/JoneZhu/SpaceJudge/issues) 提交建议或问题，也欢迎提交拉取请求。报告问题时请带上 macOS 版本、芯片类型、软件版本、复现步骤和经过脱敏的截图，尽量使用合成目录复现。
 
-- Xcode 工程：`App/SpaceJudge.xcodeproj`
-- Swift 测试：`arch -arm64 swift test`
-- 当前回归：596 项 Swift 测试 / 81 suites、109 项发布脚本测试通过；49 项 Node/MCP 测试为上一轮 0.5.0 历史结果，本轮未改动该实现。0.5.2 已安装，附带原生 CLI；已用合成目录实测 CLI 定向扫描与所有查询。Codex 草稿接收及真实模型效果尚待人工确认。此前 universal MVP 已实操选择、浏览、信息、Finder、取消和恢复；百万包装夹具 1000001 节点完整持久化，CLI 重扫峰值 RSS 155648000 B，低于 250000000 B 工程门。
-- 最新交付和证据：[原生MVP独立验收](docs/37-native-mvp-acceptance.md)
-- 最短操作入口：[本机MVP使用说明](docs/38-native-mvp-quickstart.md)
-- 最新分析入口：[右键 → Codex 清理上下文与 CLI](docs/42-cleanup-context-and-cli.md)（0.5.2 build 7，无独立登录或内置 Node；全局 CLI/MCP 配置不变）
-- 历史发布工程基线：[Phase 5D-A](docs/23-phase-5d-a-baseline.md)
+不要上传凭据、原始扫描数据库、个人文件清单或未经检查的完整日志。
 
-当前支持启动盘统一可见命名空间与受保护的本地工作缓存，但不联合扫描任意外部/网络卷，也没有 APFS snapshot/clone 独占空间估算或 Developer ID 签名公证的公开发行包。0.5.2 从右键把选中范围的名称、可选准确路径、大小、扫描元数据与 CLI 用法交给已有 Codex 桌面应用作为草稿，要求核查并给清理方案。不自动发送、不读取文件内容、不执行删除。外部 Codex 使用自身权限设置，不是 SpaceJudge 的只读沙箱。
+工程设计、数据口径和验收记录见 [文档目录](docs/README.md)。早期交互原型保留在 `index.html`、`index-v2.html`、`index-v1.html`，仅展示固定示例，不读取磁盘，也不能作为原生性能证明。
 
-## 运行原生 App（Phase 7 MVP）
+## 许可证
 
-已构建的本机交付可以直接启动：
-
-```sh
-open /Applications/SpaceJudge.app
-```
-
-0.5.2 构建 7 保留启动页、扫描中逐步出图与后台刷新，右键「用 Codex 分析…」用于制定清理方案。
-旧版已备份，安装与回滚记录见 [清理上下文与 CLI](docs/42-cleanup-context-and-cli.md)；新增 App 内 helper，原 CLI 和全局 MCP 配置没有改变。
-使用和限制见文档38、42。源码构建（可选，无需 Node/runtime；随 App CLI 需用 local-candidate.sh --with-cli 打包）：
-
-```sh
-xcodebuild -project App/SpaceJudge.xcodeproj -scheme SpaceJudge \
-  -configuration Debug -derivedDataPath build/DerivedData \
-  build CODE_SIGNING_ALLOWED=NO
-open build/DerivedData/Build/Products/Debug/SpaceJudge.app
-```
-
-首次启动会创建一个只属于本应用的本地 SQLite 快照缓存（`~/Library/Caches/SpaceJudge`），缓存目录本身不会扫描自身。
-
-关键操作：
-
-- `⌘O` / 左上角文件夹按钮：选择要分析的文件夹或磁盘。
-- 单击方块：选中（绿色轮廓），并原位展开目录。
-- 双击目录：进入该目录；也可用面包屑、后退、上一级导航。
-- 顶部右侧：重新扫描；仅扫描进行中显示“取消”。`⌘R` 重新扫描当前选择，扫描进行中不会触发。
-- 概览 / 详细：切换 tile 密度与嵌套深度。
-- 悬停：查看全名、类型与占用；右键：进入 / 展开 / 折叠 / 信息 / 在 Finder 中显示 / 用 Codex 分析。
-- 底部小条：容量“已用 / 总 / 剩余”与“当前位置”大小（当前focus的归属字节；未知用—，
-  活动扫描标注“正在统计”，取消后为“未完成”）；悬停可看扫描范围对账与容量来源。
-- 顶部列表按钮：打开当前范围的有界项目列表（最多 500 项），包含 0 占用/空文件，可选中查看信息或在 Finder 中显示。
-
-切换目录时新位置读取期间，旧地图只作显示且不可选中/展开/进入/Finder，并明确标注上一位置；
-面包屑、后退、上一级仍可用。
-
-默认会为当前页最大的若干目录自动展开两层浅层预览；用户手动折叠的目录（包括先显式展开再折叠）在下一次刷新时不会自行重新打开。展开目录的标题只出现在预留的 header 中，子块从 header 下方开始，不会发生标题与子块重叠。
-
-仅 Debug 构建可用于验收的启动环境变量（Release 完全忽略）：
-
-- `SPACEJUDGE_TEST_APPEARANCE=dark|light`：仅改变本应用的外观。
-- `SPACEJUDGE_TEST_WINDOW_SIZE=736x560`（或 `1120x760` / `1440x900`）：设置窗口内容尺寸。
-- `SPACEJUDGE_TEST_ROOT_PATH`、`SPACEJUDGE_TEST_DATABASE_PATH`：无面板选择固定夹具与临时库。
-
-已知限制与测量范围：
-
-- 没有删除或自动清理能力。普通扫描只读元数据、默认不上传；Codex 桌面草稿由用户检查并确认发送，无需 SpaceJudge 独立登录；模型效果待验收，不自动连接 MCP。
-- 扫描遵循选中根所在卷的边界，不联合跨真实mount；不估算APFS克隆或快照可释放量。
-- 容量优先采用系统“重要用途可用”；当该值为 0 或缺失但普通可用或 Darwin `statfs` 仍有正值时，退化到普通可用并标注来源，不会因此误判满盘。真实全部来源为 0 时仍按 0 处理。
-- 百万内存门已独立通过：完整E2E为145506304 B，最终取消修复后CLI重扫为155648000 B。生成时间不计入扫描，缓存状态未控制；GUI的系统框架footprint与该RSS口径不同，不混用数字，也不把单机结果当作所有磁盘性能承诺。
-- 本机Apple Silicon实操通过；Intel实机、Developer ID、公证和公开分发验证不在本次本机MVP验收内。
-
-Phase 5D 已选择 Developer ID + 公证 DMG 的直接分发方向，并拆分为 5D-A“发布工程就绪”和 5D-B“真实分发验证”。5D-A 已实现并经 Codex 独立验收：Release 启用 Hardened Runtime、保持无 Sandbox 且无 exception entitlement；新增完整 AppIcon 与中英文本地化的只读文件夹权限说明；`scripts/release/` 提供 universal2 ad-hoc 本地候选、fail-closed 的正式签名/公证/staple/Gatekeeper 流水线与 108 项脚本自测；[直接分发 runbook](docs/runbooks/direct-release.md) 记录人工凭据准备、5D-A 本地候选、5D-B 正式发布、验证与回滚。首个干净 Git 基线已经建立；本机尚无 Developer ID Application，因此正式 preflight 现在只剩签名身份 blocker，不会把本地候选宣称为可发布版本，也不会运行真实公证或上传。
-
-## 当前版本：V3 空间图
-
-`index.html` 现在打开 V3；可编辑源文件为 `spacejudge-map.html`。V2 保留在 `index-v2.html` 和 `spacejudge-simple.html`。
-
-只保留目录导航、空间图、概览 / 详细和图例。默认展示全盘。总容量、已用、剩余缩成图例旁的一行小字，进入子目录后仍显示整块磁盘的数据。移除独立标题栏、大块磁盘卡片、底部详情栏、扫描演示与额外说明区域；保留单击展开、双击进入、悬停、右键信息和路径导航。
-
-所有数据为示例，不读取或删除本机文件，不包含 AI 功能。
-
-直接在浏览器打开 `index.html` 可体验 V3。`spacejudge-map.html` 是可编辑原型源片段；预览文件保留在仓库中，不要求安装原作者的 Codex 可视化插件。
-
-## V2 简洁版记录
-
-`index-v2.html` 打开 V2；可编辑源文件为 `spacejudge-simple.html`。第一版保留在 `index-v1.html` 和 `spacejudge-prototype.html`，便于对比。
-
-V2 以大面积空间图为主体，移除 AI 面板、建议、清理清单、四色标记、复杂筛选、侧栏与多步骤引导。保留：
-
-- 顶部整块磁盘的容量、已用与剩余空间，浏览子目录时保持不变。
-- 单击原位展开、双击进入、面包屑、后退与上一级。
-- 概览 / 详细两档细节，选中项在底部显示。
-- 文件信息、悬停全名、右键菜单，以及示例位置选择与模拟扫描。
-
-默认用户目录为 312.6 GB；全盘已用 412.6 GB，另有应用程序 42 GB、系统及其他 58 GB。顶部可用空间为 99.4 GB。点击面包屑中的 `Macintosh HD` 可浏览完整磁盘示例。
-
-右上角问号中有简短操作说明。所有数据均为模拟，原型不读取或删除本机文件，也不提供 AI 判断。
-
-直接在浏览器打开 `index-v2.html` 可体验 V2。
-
-## 以下为 V1 设计记录
-
-打开 `index-v1.html` 即可体验第一版。无需应用后端，不访问用户磁盘。空间数据和 AI 判断均为固定示例，不能用来评估原生扫描性能。
-
-页面右上角有「原型说明」与「跟着体验」。说明直接包含产品定位、来源、操作方法、筛选语法、实现范围和未实现部分。
-
-## 建议体验顺序
-
-1. 单击「资源库」，观察在原位展开更多子目录。
-2. 双击 `Developer` 进入；使用面包屑、上一级、后退、前进导航。
-3. 选中 `DerivedData`，查看右侧用途、依据和处理影响。
-4. 加入清理清单，模拟移入废纸篓，再撤销。
-5. 回到「我的文件」，尝试 `*.dmg;>5gb`、`>6months`、`|*.dmg` 等筛选。
-6. 给条目添加颜色标记，再用 `:green` 或 `:all` 筛选。
-7. 演示重新扫描，尝试在扫描中导航、暂停、继续和停止。
-
-## 设计依据
-
-研究日期：2026-09-26。研究方式为官方文档与产品资料查阅，没有运行 Windows 版 SpaceSniffer。
-
-- [SpaceSniffer 官方操作介绍](https://www.uderzo.it/main_products/space_sniffer/)：嵌套 treemap、单击展开、双击进入、文件筛选、排除条件和四色标记。
-- [SpaceSniffer 官方功能说明](https://www.uderzo.it/main_products/space_sniffer/features.html)：浏览器式导航、扫描中浏览、细化扫描、多视图共享扫描、变化反馈与系统右键菜单。
-- [腾讯微信 Mac 产品页](https://apps.apple.com/cn/app/%E5%BE%AE%E4%BF%A1/id836500024?mt=12)：视觉参考对象。此原型采用浅色侧栏、灰白分层、绿色强调和紧凑操作，未使用微信品牌素材。
-
-我们保留 SpaceSniffer 的核心空间探索交互；新增“文件洞察”和“主动加入清单”的判断流程。空间地图底色表示目录类别，四色小圆点表示用户检查标记，避免把不同语义混在一起。
-
-第一版原型选择显示固定的浅色方案。用户目录示例总计 312.6 GB；磁盘示例已用 412.6 GB，另有 100 GB 不属于该用户目录。模拟移入废纸篓不会增加磁盘可用空间。修改时间使用相对于演示基准日的月份数据，并不代表最后使用时间。
-
-## 文件与再生成
-
-- `spacejudge-prototype.html`：自包含可编辑片段，CSS、示例文件树、treemap 布局与交互均在其中。
-- `index-v1.html`：第一版可单独打开的浏览器预览文件，由片段生成。
-- `output/playwright/`：本地浏览器验证截图与验收记录，不纳入公开源码提交。
-
-直接在浏览器打开 `index-v1.html` 可体验 V1。
-
-也可以在此目录运行 `python3 -m http.server 8765 --bind 127.0.0.1`，打开 `http://127.0.0.1:8765/index.html`。
-
-## 原型边界
-
-已实现：按大小布局、细节层级、原位展开、目录进入、历史导航、表达式筛选、检查标记、上下文菜单、预设 AI 解释、候选清单、模拟移除与撤销、模拟扫描过程、操作引导和响应式布局。
-
-原生 Phase 4 已实现：真实目录选择、session-only 权限、文件扫描、SQLite 快照、磁盘容量显示，以及有界、异步、单原生绘制面的空间图与浏览交互。
-
-后续阶段仍待实现：APFS clone/快照/云文件口径、FSEvents、完整权限引导、签名、公证与发布恢复验证；废纸篓、删除和 AI 只有在新的产品规格与安全设计通过后才会加入。
-
-SpaceSniffer 多窗口共享扫描、真实拖拽入口、自定义报告导出尚未纳入这个交互原型。NTFS 专属特性不直接移植到 Mac。
-
-当前已验证的原生技术方向是 Swift、SwiftUI / AppKit、Core Graphics 与 SQLite；原生 treemap 已有独立 layout/hit/render 基准，FSEvents 与百万文件真实系统盘联合基准尚未完成。HTML 中的流畅交互仍不构成原生性能证明。
+SpaceJudge 采用 [MIT 许可证](LICENSE)。第三方依赖遵循各自许可证。你可以使用、修改和分发本项目，请保留相应版权和许可声明。
