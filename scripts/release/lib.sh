@@ -684,6 +684,16 @@ sj_bind_manifest() {
             notice="$app/Contents/Resources/TESTING-README.txt"
             [ -f "$notice" ] && [ ! -L "$notice" ] || sj_die "missing bundled testing notice"
             [ "$(sj_sha256 "$notice")" = "$(sj_manifest_value "$manifest" testingNoticeSHA256)" ] || sj_die "testing notice hash mismatch"
+            # Old published 0.5.2 artifacts have neither a guide nor a hash.
+            # Once either exists, require both; never accept an unbound guide.
+            local guide guide_hash
+            guide="$app/Contents/Resources/InstallationGuide.html"
+            guide_hash="$(plutil -extract installationGuideSHA256 raw -o - "$manifest" 2>/dev/null || true)"
+            if [ -e "$guide" ] || [ -L "$guide" ] || [ -n "$guide_hash" ]; then
+                [ -f "$guide" ] && [ ! -L "$guide" ] || sj_die "missing real bundled installation guide"
+                [[ "$guide_hash" =~ ^[0-9a-f]{64}$ ]] || sj_die "missing or invalid installation guide hash"
+                [ "$(sj_sha256 "$guide")" = "$guide_hash" ] || sj_die "installation guide hash mismatch"
+            fi
             ;;
         local)
             [ "$(sj_manifest_value "$manifest" kind)" = "local-adhoc" ] || sj_die "local manifest kind must be local-adhoc"
@@ -791,7 +801,8 @@ sj_detach_dmg_strict() {
 
 # Requires a DMG root containing exactly the app bundle (a real directory, not a
 # symlink) and the Applications symlink pointing precisely at /Applications.
-# No other (including hidden) payload is accepted.
+# Experimental packages may additionally carry a bound notice and offline
+# guide. No other (including hidden) payload is accepted.
 sj_check_dmg_layout() {
     local mountpoint="$1" app_name="$2" mode="${3:-local}"
     case "$mode" in local|experimental|release) : ;; *) sj_die "unknown layout mode" ;; esac
@@ -801,7 +812,7 @@ sj_check_dmg_layout() {
         base="$(basename "$entry")"
         case "$base" in
             "$app_name"|"Applications") : ;;
-            "TESTING-README.txt")
+            "TESTING-README.txt"|"安装与首次打开.html")
                 if [ "$mode" != "experimental" ]; then
                     unexpected="${unexpected}${base}"$'\n'
                 fi
@@ -822,6 +833,15 @@ sj_check_dmg_layout() {
             || sj_die "DMG notice differs from signed bundle notice"
         grep -q 'NOT NOTARIZED / 未经过 Apple 公证' "$notice" || sj_die "missing unnotarized warning"
         grep -q 'EXPERIMENTAL TEST BUILD' "$notice" || sj_die "missing experimental warning"
+        local guide="$mountpoint/安装与首次打开.html"
+        local bundled_guide="$mountpoint/$app_name/Contents/Resources/InstallationGuide.html"
+        # Accept legacy packages without either guide, but never partial,
+        # changed, symlinked or non-file guides in new packages.
+        if [ -e "$guide" ] || [ -L "$guide" ] || [ -e "$bundled_guide" ] || [ -L "$bundled_guide" ]; then
+            [ -f "$guide" ] && [ ! -L "$guide" ] \
+                && [ -f "$bundled_guide" ] && [ ! -L "$bundled_guide" ] || sj_die "installation guides must be real files in DMG and bundle"
+            cmp -s "$guide" "$bundled_guide" || sj_die "DMG guide differs from signed bundle guide"
+        fi
     fi
     if [ -n "$unexpected" ]; then
         sj_warn "unexpected DMG root entries:"

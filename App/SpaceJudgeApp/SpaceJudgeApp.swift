@@ -20,6 +20,15 @@ struct SpaceJudgeApp: App {
                 .environmentObject(appDelegate)
         }
         .defaultSize(width: 1120, height: 760)
+        // Help has no model-dependent enablement, so SwiftUI owns it. Adding
+        // items through AppKit at launch can target a menu SwiftUI replaces.
+        .commands {
+            CommandGroup(replacing: .help) {
+                Button("安装与权限帮助") {
+                    AppDelegate.openInstallationGuide()
+                }
+            }
+        }
     }
 }
 
@@ -46,6 +55,9 @@ struct RootView: View {
                     .controlSize(.large)
                     .disabled(appDelegate.isBootstrapping)
                     .accessibilityIdentifier("bootstrap-retry")
+                    Button("安装与权限帮助") {
+                        AppDelegate.openInstallationGuide()
+                    }
                 }
                 .padding(40)
                 .frame(minWidth: 480, minHeight: 360)

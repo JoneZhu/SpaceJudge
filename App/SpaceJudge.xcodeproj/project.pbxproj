@@ -16,6 +16,7 @@
 		AA0000000000000000000012 /* SpaceJudgeAppSupport in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000011 /* SpaceJudgeAppSupport */; };
 		AA0000000000000000000036 /* SpaceJudgeTreemapUI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000037 /* SpaceJudgeTreemapUI */; };
 		AA0000000000000000000043 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000040 /* InfoPlist.strings */; };
+		AA0000000000000000000045 /* InstallationGuide.html in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000044 /* InstallationGuide.html */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +28,7 @@
 		AA0000000000000000000024 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000000000000000000025 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0000000000000000000026 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		AA0000000000000000000044 /* InstallationGuide.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = InstallationGuide.html; sourceTree = "<group>"; };
 		AA0000000000000000000041 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		AA0000000000000000000042 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -70,6 +72,7 @@
 				AA0000000000000000000024 /* Assets.xcassets */,
 				AA0000000000000000000025 /* Info.plist */,
 				AA0000000000000000000026 /* PrivacyInfo.xcprivacy */,
+				AA0000000000000000000044 /* InstallationGuide.html */,
 				AA0000000000000000000040 /* InfoPlist.strings */,
 			);
 			path = SpaceJudgeApp;
@@ -144,6 +147,7 @@
 				AA0000000000000000000034 /* Assets.xcassets in Resources */,
 				AA0000000000000000000035 /* PrivacyInfo.xcprivacy in Resources */,
 				AA0000000000000000000043 /* InfoPlist.strings in Resources */,
+				AA0000000000000000000045 /* InstallationGuide.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -237,7 +241,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -246,7 +250,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.5.2;
+				MARKETING_VERSION = 0.5.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hongdazhu.SpaceJudge;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -261,7 +265,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -270,7 +274,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.5.2;
+				MARKETING_VERSION = 0.5.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hongdazhu.SpaceJudge;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;

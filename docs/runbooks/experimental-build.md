@@ -8,18 +8,26 @@
 
 ```sh
 bash scripts/release/local-candidate.sh --experimental \
-  --output-dir "$(pwd)/output/experimental-0.5.2-test1"
+  --output-dir "$(pwd)/output/experimental-v0.5.3"
 ```
 
-脚本始终重新构建 universal App 和 CLI，先签 CLI，再签 App；将实验标记与源码 commit 写入签名覆盖的 Info.plist。应用底部显示“实验性测试版 · 未经过 Apple 公证”。DMG 根目录和 App 资源均包含测试说明，App 内附 MIT 许可证。
+脚本始终重新构建 universal App 和 CLI，先签 CLI，再签 App；将实验标记与源码 commit 写入签名覆盖的 Info.plist。DMG 根目录和 App 资源均包含测试说明，App 内附 MIT 许可证。
 
-产物命名为 `SpaceJudge-0.5.2-7-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg`，附 `.sha256` 和 `.json` 清单。
+2026-10-03 安装引导优化：主界面不再常驻显示实验性／公证状态，状态仍保留在下载说明、包内说明和安装引导，不改变签名、权限或正式发行门禁。欢迎页及“帮助 → 安装与权限帮助”可打开离线图文引导；数据库准备失败时也能进入帮助。新实验包根目录新增 `安装与首次打开.html`，与签名覆盖的 `Contents/Resources/InstallationGuide.html` 完全相同，manifest 新增 `installationGuideSHA256`。校验器拒绝两份不同、缺失、符号链接或未绑定 hash 的引导；旧 v0.5.2 包既无引导也无该 hash 时保持兼容。源码下一版为 0.5.3 / build 8，尚未发布或替换已安装应用。
+
+本轮验收：596 项 Swift 测试、146 项发布脚本测试、5 项引导静态契约检查通过；双架构 Release 编译通过，引导资源与源码字节一致。可运行 `node --test scripts/release/installation-guide.test.mjs` 复验离线页面及 UI 接线契约。真实欢迎页已确认无常驻发布提示，并有安装帮助入口；“帮助”菜单最终入口已在原生 UI 中确认可见并点击，没有出现应用的打开失败提示。默认浏览器中的本地文件最终显示未独立确认，HTML 已在本地浏览器预览并核查章节导航和示意图。GUI 验证发现启动时通过 AppKit 添加帮助项会被 SwiftUI 覆盖，已改为静态 `CommandGroup(replacing: .help)`；扫描菜单的动态策略不变。
+
+随后经用户“替换一下，我感受一下”授权，已将 `/Applications/SpaceJudge.app` 更新到 0.5.3 / build 8 本地预览，并正常打开到欢迎页。更新前原 `/` 扫描处于完成态，通过原生退出菜单关闭，没有中断正在运行的扫描。旧版 0.5.2 / build 7 原包保留在用户 Application Support 下的专用安装备份目录，准确位置仅记录于忽略的本地安装日志；原路径替换失败时安装脚本会恢复旧包。新包明确标为 `local-preview`、`SpaceJudgeLocalPreview=true`、`SpaceJudgeSourceState=dirty`，不是干净源码的实验 Release。原包 CLI 按原字节保留，SHA-256 为 `704a1e1124e8e4057d2d548bffd54b93fc3a33dc3218526c33e3843fdfc3bd7a`，新旧比对、完整签名、版本、HTML 资源和 CLI help 均通过。CLI/MCP/Codex 全局配置和权限设置未修改，未删除用户文件或手动删除快照。安装后的欢迎页和帮助菜单已用原生 UI 确认；前轮两个临时预览实例已正常退出，只保留已安装实例。GitHub v0.5.2 安装资产当时仍未变更。安装证据为同一 output 目录中的 `installed-welcome.png`、`logs/install-prepare.log`、`logs/install-replace.log` 和安装前后哈希记录。需要恢复时，先退出新版，保留新版副本，再将本地日志记录的旧版原包拷回原路径并重新验证签名。
+
+以上 2026-10-03 预览和本机替换证据保存在忽略的 `output/install-guide-20261003/`（日志、引导预览与欢迎页截图）。当时未提交 Git、推送或上传新 Release，公开 v0.5.2 原资产与 tag 不变。当时没有完成新实验 DMG 的端到端构建、真实下载、干净电脑 Gatekeeper 或 Intel 实机验收；实验构建仍要求干净源码 commit，不能把 dirty 预览冒充可发布包。签名预览在临时目录操作：文档云盘为生成目录附加 FinderInfo 导致直接签名失败，重新复制本轮生成的 App 到独立临时目录后签名完整性检查通过；未移除已下载包或已安装应用的 quarantine，也未更改系统安全设置。
+
+当前构建产物命名为 `SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg`，附 `.sha256` 和 `.json` 清单。
 校验（在上述构建使用的同一源码版本运行）：
 
 ```sh
 bash scripts/release/verify-artifact.sh --mode experimental \
-  --dmg "$(pwd)/output/experimental-0.5.2-test1/SpaceJudge-0.5.2-7-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg" \
-  --manifest "$(pwd)/output/experimental-0.5.2-test1/SpaceJudge-0.5.2-7-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.json"
+  --dmg "$(pwd)/output/experimental-v0.5.3/SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg" \
+  --manifest "$(pwd)/output/experimental-v0.5.3/SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.json"
 ```
 
 清单的 `kind=experimental-adhoc`、`audience=opt-in-testers`、`distributionReady=false`、`notarizationStatus=not-submitted` 不可省略；源码须 clean、commit 要与 App 标记一致，CLI 和测试说明的 hash 须匹配。校验通过证明包内一致性与签名完整性，不证明恶意代码不存在，也不证明下载后 Gatekeeper 会放行。校验值不是可信来源以外的独立身份验证。
@@ -29,7 +37,7 @@ bash scripts/release/verify-artifact.sh --mode experimental \
 ## 测试者安装
 
 1. 从可信项目发布入口取得 DMG、清单、校验值，确认文件名含 EXPERIMENTAL / NOT-NOTARIZED。
-2. 打开 DMG，阅读 `TESTING-README.txt`，拖 SpaceJudge.app 到“应用程序”。覆盖已有版本前先保留旧应用副本，退出旧版。
+2. 打开 DMG，先看 `安装与首次打开.html`（旧包只有 `TESTING-README.txt`），拖 SpaceJudge.app 到“应用程序”。覆盖已有版本前先保留旧应用副本，退出旧版。
 3. 未公证包可能被 macOS 拦截。仅在确认来源可信时，按 [Apple 单应用批准说明](https://support.apple.com/102445) 在系统设置“隐私与安全”中处理。选项受系统版本和组织管理策略影响，不承诺每台电脑都能打开。
 4. 不提供关闭 Gatekeeper/SIP、移除 quarantine 或绕过企业策略的命令；拒绝安装时可选择源码自编译。
 5. 先扫描小型合成目录，验证选择、扫描中出图、取消、导航和刷新。确认权限受限与未完成提示。
@@ -38,7 +46,7 @@ bash scripts/release/verify-artifact.sh --mode experimental \
 
 ## 上传约定
 
-按用户选择，版本 tag 使用 `v0.5.2`，不加 `test.1`；版本号、测试状态和公证状态是不同概念。每次发布须获得明确授权，仍标记 **Pre-release**，并绑定构建清单中的精确 commit；标题和说明首行写“v0.5.2 · 测试版 / 未公证”。仅上传 DMG、`.sha256`、清单和同版测试说明，不上传 `logs/`、扫描数据库、个人路径、备份或整个 output 文件夹。不创建正式稳定版/latest 宣传。
+按用户选择，版本 tag 使用 `v0.5.3` 这类纯版本号，不加 `test.1`；版本号、测试状态和公证状态是不同概念。每次发布须获得明确授权，仍标记 **Pre-release**，并绑定构建清单中的精确 commit；标题和说明首行写“v0.5.3 · 测试版 / 未公证”。仅上传 DMG、`.sha256`、清单和同版测试说明，不上传 `logs/`、扫描数据库、个人路径、备份或整个 output 文件夹。不创建正式稳定版/latest 宣传。
 
 本地输出目录中的 `test1` 只是构建工作目录名，不是对外版本号，也不影响应用本身的 0.5.2。重建时不要覆盖已分享的同版本资产或移动已发布的 tag；如有代码变更，应使用新的版本。
 

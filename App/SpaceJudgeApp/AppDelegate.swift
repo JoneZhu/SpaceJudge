@@ -253,6 +253,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         refreshScanMenuEnabledState()
     }
 
+    /// Bundled, offline help; never starts a scan, changes security settings or
+    /// automatically visits the web. External references require a user click.
+    static func openInstallationGuide() {
+        guard let url = Bundle.main.url(forResource: "InstallationGuide", withExtension: "html"),
+              NSWorkspace.shared.open(url) else {
+            let alert = NSAlert()
+            alert.messageText = "无法打开安装帮助"
+            alert.informativeText = "请在下载的安装包中打开“安装与首次打开.html”，或查看项目 README 的安装说明。"
+            alert.addButton(withTitle: "好")
+            alert.runModal()
+            return
+        }
+    }
+
     @objc private func chooseLocationFromMenu(_ sender: Any?) {
 #if DEBUG
         Self.logMenuSelfTest("choose action fired")

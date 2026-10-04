@@ -10,7 +10,7 @@
 
 [下载与版本](https://github.com/JoneZhu/SpaceJudge/releases) · [使用说明](docs/38-native-mvp-quickstart.md) · [问题反馈](https://github.com/JoneZhu/SpaceJudge/issues) · [工程文档](docs/README.md)
 
-> 当前版本：**v0.5.2，测试版，未经过 Apple 公证。**[直接下载 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.2/SpaceJudge-0.5.2-7-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg) · [版本说明与校验文件](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.2)。版本号不加测试后缀；测试状态通过发布说明、安装包标记和应用提示表达。
+> 当前版本：**v0.5.3，测试版，未经过 Apple 公证。**[直接下载 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.3/SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg) · [版本说明与校验文件](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.3)。版本号不加测试后缀；测试状态保留在下载页与安装引导中，不占用日常扫描界面。
 
 ## 一分钟视频上手
 
@@ -45,9 +45,11 @@ SpaceJudge 负责提供事实，用户和外部 Agent 决定如何处理。**软
 
 ### 安装测试版
 
-[下载 v0.5.2 测试版 DMG（约 6.5 MiB）](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.2/SpaceJudge-0.5.2-7-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg)。打开后阅读包内说明，再把 `SpaceJudge.app` 拖入“应用程序”。更新前先退出旧版，建议保留旧应用副本。
+[中文图文安装与首次打开引导](App/SpaceJudgeApp/InstallationGuide.html)（下载 HTML 后可离线阅读）。v0.5.3 将同一引导放入 DMG，欢迎页及“帮助 → 安装与权限帮助”也可打开；旧 v0.5.2 包仍使用原有文字说明。
 
-[发布页的 Assets](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.2) 同时提供 SHA-256 校验文件、构建清单和测试说明。请选择 `.dmg` 安装包；`Source code` 压缩包是源码，不是应用。已从公开地址下载并核对安装包校验值；这不等于完成其他 Mac 的安装验收。
+[下载 v0.5.3 测试版 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.3/SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg)。打开后先阅读 `安装与首次打开.html`，再把 `SpaceJudge.app` 拖入“应用程序”。更新前先退出旧版，建议保留旧应用副本。
+
+[发布页的 Assets](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.3) 同时提供 SHA-256 校验文件、构建清单和测试说明。请选择 `.dmg` 安装包；`Source code` 压缩包是源码，不是应用。发布过程会下载附件核对校验值；这不等于完成其他 Mac 的安装验收。
 
 当前测试包使用免费的本地签名，**不是 Developer ID 签名，也没有完成 Apple 公证**。首次打开可能被 macOS 拦截。仅在确认来源可信时，按 [Apple 的单应用批准说明](https://support.apple.com/102445) 在“系统设置 → 隐私与安全”中处理；受管理的电脑可能不允许安装。
 
@@ -189,7 +191,7 @@ swift build -c release --product spacejudge-agent-cli
 
 ```sh
 bash scripts/release/local-candidate.sh --experimental \
-  --output-dir "$(pwd)/output/experimental-v0.5.2"
+  --output-dir "$(pwd)/output/experimental-v0.5.3"
 ```
 
 输出目录必须不存在或为空。构建不会提交 Apple 公证、上传 GitHub、安装应用或修改全局 CLI/MCP 配置。校验和发布约定见 [测试包构建说明](docs/runbooks/experimental-build.md)。
@@ -199,12 +201,13 @@ bash scripts/release/local-candidate.sh --experimental \
 ```sh
 swift test
 bash scripts/release/test-release-scripts.sh
+node --test scripts/release/installation-guide.test.mjs
 
 # 可选 MCP 测试
 (cd AgentMCP && npm ci && npm test)
 ```
 
-最近本机验证通过：596 项 Swift 测试、135 项发布脚本测试；49 项 MCP 测试也已通过。测试 DMG 独立校验和包内 CLI 合成目录扫描通过。这些结果不替代 Intel 实机、干净电脑安装或真实模型效果验收，也不是对所有磁盘的性能保证。
+最近本机验证通过：596 项 Swift 测试、146 项发布脚本测试、5 项安装引导检查；49 项 MCP 测试在此前版本验证通过，此次未修改 MCP。测试 DMG 需独立校验并运行包内 CLI 合成目录扫描。这些结果不替代 Intel 实机、干净电脑安装或真实模型效果验收，也不是对所有磁盘的性能保证。
 
 ## 隐私、容量口径与已知限制
 

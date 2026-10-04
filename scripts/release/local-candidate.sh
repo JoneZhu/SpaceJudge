@@ -172,6 +172,9 @@ if [ "$EXPERIMENTAL" -eq 1 ]; then
     cp "$REPO_DIR/scripts/release/TESTING-README.txt" "$WORK_APP/Contents/Resources/TESTING-README.txt"
     cp "$REPO_DIR/LICENSE" "$WORK_APP/Contents/Resources/LICENSE"
     cp "$REPO_DIR/scripts/release/TESTING-README.txt" "$WORK_DIR/staging/TESTING-README.txt"
+    # Help must be readable before Gatekeeper allows the app to launch.
+    [ -f "$WORK_APP/Contents/Resources/InstallationGuide.html" ] || sj_die "installation guide missing from app"
+    cp "$WORK_APP/Contents/Resources/InstallationGuide.html" "$WORK_DIR/staging/安装与首次打开.html"
 fi
 
 sj_log "applying ad-hoc Hardened Runtime signature"
@@ -234,6 +237,7 @@ if [ "$EXPERIMENTAL" -eq 1 ]; then
     sj_manifest_add_string audience "opt-in-testers"
     sj_manifest_add_string gitCommit "$GIT_COMMIT"
     sj_manifest_add_string testingNoticeSHA256 "$(sj_sha256 "$WORK_DIR/staging/TESTING-README.txt")"
+    sj_manifest_add_string installationGuideSHA256 "$(sj_sha256 "$WORK_APP/Contents/Resources/InstallationGuide.html")"
 else
     sj_manifest_add_string kind "local-adhoc"
 fi

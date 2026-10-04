@@ -55,17 +55,6 @@ struct ContentView: View {
         }
         .frame(minWidth: 736, minHeight: 560)
         .background(Color(nsColor: .windowBackgroundColor))
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if Bundle.main.object(forInfoDictionaryKey: "SpaceJudgeReleaseChannel") as? String == "experimental" {
-                Text("实验性测试版 · 未经过 Apple 公证 · 不代表正式发行版")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 5)
-                    .background(Color(nsColor: .windowBackgroundColor))
-                    .accessibilityIdentifier("experimental-build-notice")
-            }
-        }
         .sheet(isPresented: $showsAgentAnalysis) { agentAnalysisPanel }
         // A new scan/root invalidates local panel state so an old reveal error
         // or info panel cannot survive into the new scan.
@@ -128,6 +117,13 @@ struct ContentView: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
+            Button("安装与权限帮助") {
+                AppDelegate.openInstallationGuide()
+            }
+            .buttonStyle(.plain)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .accessibilityIdentifier("installation-help")
             Spacer(minLength: 24)
         }
         .padding(32)

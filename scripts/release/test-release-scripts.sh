@@ -362,6 +362,23 @@ cp "$NOTICE_SOURCE" "$LAYOUT/SpaceJudge.app/Contents/Resources/TESTING-README.tx
 expect_pass "experimental layout accepts a bound notice" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
 expect_fail "local layout cannot accept experimental payload" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" local
 expect_fail "release layout cannot accept experimental payload" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" release
+GUIDE_SOURCE="$SCRIPT_DIR/../../App/SpaceJudgeApp/InstallationGuide.html"
+cp "$GUIDE_SOURCE" "$LAYOUT/SpaceJudge.app/Contents/Resources/InstallationGuide.html"
+expect_fail "layout rejects missing external guide" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
+cp "$GUIDE_SOURCE" "$LAYOUT/安装与首次打开.html"
+expect_pass "layout accepts identical real installation guides" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
+printf 'changed\n' >> "$LAYOUT/安装与首次打开.html"
+expect_fail "layout rejects modified external guide" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
+rm -f "$LAYOUT/安装与首次打开.html"
+ln -s "$GUIDE_SOURCE" "$LAYOUT/安装与首次打开.html"
+expect_fail "layout rejects symlinked external guide" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
+rm -f "$LAYOUT/安装与首次打开.html"
+cp "$GUIDE_SOURCE" "$LAYOUT/安装与首次打开.html"
+rm -f "$LAYOUT/SpaceJudge.app/Contents/Resources/InstallationGuide.html"
+expect_fail "layout rejects missing bundled guide" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
+ln -s "$GUIDE_SOURCE" "$LAYOUT/SpaceJudge.app/Contents/Resources/InstallationGuide.html"
+expect_fail "layout rejects symlinked bundled guide" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
+rm -f "$LAYOUT/SpaceJudge.app/Contents/Resources/InstallationGuide.html" "$LAYOUT/安装与首次打开.html"
 printf 'changed\n' >> "$LAYOUT/TESTING-README.txt"
 expect_fail "experimental layout rejects different notices" sj_check_dmg_layout "$LAYOUT" "SpaceJudge.app" experimental
 rm -f "$LAYOUT/TESTING-README.txt"
@@ -454,6 +471,18 @@ mv "$TEST_DIR/symlink-target-cli" "$BIND_APP/Contents/Helpers/spacejudge-agent-c
 printf 'tampered' >> "$BIND_APP/Contents/Resources/TESTING-README.txt"
 expect_fail "experimental manifest rejects a changed notice" sj_bind_manifest "$EXPERIMENTAL_MANIFEST" "$BIND_APP" experimental "abc123" "arm64 x86_64"
 cp "$NOTICE_SOURCE" "$BIND_APP/Contents/Resources/TESTING-README.txt"
+cp "$GUIDE_SOURCE" "$BIND_APP/Contents/Resources/InstallationGuide.html"
+expect_fail "manifest rejects guide without hash" sj_bind_manifest "$EXPERIMENTAL_MANIFEST" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+cp "$EXPERIMENTAL_MANIFEST" "$TEST_DIR/experimental-guide.json"
+plutil -insert installationGuideSHA256 -string "$(sj_sha256 "$GUIDE_SOURCE")" "$TEST_DIR/experimental-guide.json"
+expect_pass "manifest binds new guide" sj_bind_manifest "$TEST_DIR/experimental-guide.json" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+printf 'tampered' >> "$BIND_APP/Contents/Resources/InstallationGuide.html"
+expect_fail "manifest rejects changed guide" sj_bind_manifest "$TEST_DIR/experimental-guide.json" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+rm -f "$BIND_APP/Contents/Resources/InstallationGuide.html"
+expect_fail "manifest rejects missing hashed guide" sj_bind_manifest "$TEST_DIR/experimental-guide.json" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+ln -s "$GUIDE_SOURCE" "$BIND_APP/Contents/Resources/InstallationGuide.html"
+expect_fail "manifest rejects symlinked guide with matching hash" sj_bind_manifest "$TEST_DIR/experimental-guide.json" "$BIND_APP" experimental "abc123" "arm64 x86_64"
+rm -f "$BIND_APP/Contents/Resources/InstallationGuide.html"
 /usr/libexec/PlistBuddy -c 'Set :SpaceJudgeReleaseChannel release' "$BIND_APP/Contents/Info.plist"
 expect_fail "experimental manifest rejects missing test channel" sj_bind_manifest "$EXPERIMENTAL_MANIFEST" "$BIND_APP" experimental "abc123" "arm64 x86_64"
 
