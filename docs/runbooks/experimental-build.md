@@ -52,6 +52,8 @@ bash scripts/release/verify-artifact.sh --mode experimental \
 
 2026-10-01 经用户明确授权，已发布 [v0.5.2 测试版](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.2)。tag 和安装包均对应 `310a694e1233e5406adf81374e476afe33c4ab5f`；README 等后续文档维护在 main，不移动 tag。先上传草稿，再下载四个附件逐项比对 SHA-256，之后公开为 Pre-release、`latest=false`；另从无认证公开地址下载 DMG，校验值与本地包一致。详细说明保存于[版本记录](../releases/v0.5.2.md)。这次发布不替换本机已安装应用。
 
+2026-10-05（北京时间）经用户“发布上去吧”授权，已发布 [v0.5.3 测试版](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.3)。从干净 commit `682bd11baa336fd577d1e54557fddbe337b352a6` 重建 universal App 与 CLI，tag 固定绑定此 commit。596 项 Swift 测试、146 项发布脚本检查、5 项引导检查通过；独立 experimental 包校验与实际 DMG 中 CLI 合成目录扫描、状态、子项、热点、问题及容量查询通过，合成文件哈希未变。四个附件先上传草稿，通过附件 API 下载逐项字节比对后公开为 Pre-release、`latest=false`；再通过无需登录的公开地址下载 DMG，SHA-256 为 `2ca26eddd6d8e6826537a1e5277ab8fc7f4b4179f604749f7982cd2d8b4278fe`，与本地包一致。仅上传 DMG、校验文件、manifest 与测试说明；图文引导随 DMG 提供。公开 v0.5.2 的 tag 和资产不变，本机已安装 App 与全局工具配置不变。尚未完成干净电脑 Gatekeeper、Intel 实机和完整外部 Codex 建议流程验收。产物及私有证据在忽略的 `output/experimental-v0.5.3-20261004/`、`output/v053-draft-download/` 和 `output/v053-public-download.dmg`；文件夹沿用构建开始时的日期。版本说明见 [v0.5.3 记录](../releases/v0.5.3.md)，main 后续文档提交不移动 tag。
+
 代码 SSH 推送权限不等于 Release API 上传权限。发布通过用户在 GitHub 网页批准的 GitHub CLI 授权完成，凭据存于系统 keyring，不写入仓库；本地发布工具与独立配置放在被忽略的 `output/release-tools/`。后续发布仍需检查授权账号和仓库权限，不在聊天、日志或提交中输出 Token。
 
 若有测试反馈，只提交系统版本、芯片、复现步骤和合成示例；截图/日志须先脱敏。

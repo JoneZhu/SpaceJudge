@@ -49,7 +49,7 @@ SpaceJudge 负责提供事实，用户和外部 Agent 决定如何处理。**软
 
 [下载 v0.5.3 测试版 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.3/SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg)。打开后先阅读 `安装与首次打开.html`，再把 `SpaceJudge.app` 拖入“应用程序”。更新前先退出旧版，建议保留旧应用副本。
 
-[发布页的 Assets](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.3) 同时提供 SHA-256 校验文件、构建清单和测试说明。请选择 `.dmg` 安装包；`Source code` 压缩包是源码，不是应用。发布过程会下载附件核对校验值；这不等于完成其他 Mac 的安装验收。
+[发布页的 Assets](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.3) 同时提供 SHA-256 校验文件、构建清单和测试说明。请选择 `.dmg` 安装包；`Source code` 压缩包是源码，不是应用。v0.5.3 四个上传附件已下载逐项比对，DMG 也已从无需登录的公开地址下载并核对校验值；这不等于完成其他 Mac 的安装验收。
 
 当前测试包使用免费的本地签名，**不是 Developer ID 签名，也没有完成 Apple 公证**。首次打开可能被 macOS 拦截。仅在确认来源可信时，按 [Apple 的单应用批准说明](https://support.apple.com/102445) 在“系统设置 → 隐私与安全”中处理；受管理的电脑可能不允许安装。
 
@@ -207,7 +207,7 @@ node --test scripts/release/installation-guide.test.mjs
 (cd AgentMCP && npm ci && npm test)
 ```
 
-最近本机验证通过：596 项 Swift 测试、146 项发布脚本测试、5 项安装引导检查；49 项 MCP 测试在此前版本验证通过，此次未修改 MCP。测试 DMG 需独立校验并运行包内 CLI 合成目录扫描。这些结果不替代 Intel 实机、干净电脑安装或真实模型效果验收，也不是对所有磁盘的性能保证。
+最近本机验证通过：596 项 Swift 测试、146 项发布脚本测试、5 项安装引导检查；49 项 MCP 测试在此前版本验证通过，此次未修改 MCP。v0.5.3 测试 DMG 独立校验及包内 CLI 合成目录扫描、查询通过，合成文件未被修改。这些结果不替代 Intel 实机、干净电脑安装或真实模型效果验收，也不是对所有磁盘的性能保证。
 
 ## 隐私、容量口径与已知限制
 
