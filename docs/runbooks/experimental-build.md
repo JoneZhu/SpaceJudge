@@ -8,7 +8,7 @@
 
 ```sh
 bash scripts/release/local-candidate.sh --experimental \
-  --output-dir "$(pwd)/output/experimental-v0.5.3"
+  --output-dir "$(pwd)/output/experimental-v0.5.4"
 ```
 
 脚本始终重新构建 universal App 和 CLI，先签 CLI，再签 App；将实验标记与源码 commit 写入签名覆盖的 Info.plist。DMG 根目录和 App 资源均包含测试说明，App 内附 MIT 许可证。
@@ -21,13 +21,13 @@ bash scripts/release/local-candidate.sh --experimental \
 
 以上 2026-10-03 预览和本机替换证据保存在忽略的 `output/install-guide-20261003/`（日志、引导预览与欢迎页截图）。当时未提交 Git、推送或上传新 Release，公开 v0.5.2 原资产与 tag 不变。当时没有完成新实验 DMG 的端到端构建、真实下载、干净电脑 Gatekeeper 或 Intel 实机验收；实验构建仍要求干净源码 commit，不能把 dirty 预览冒充可发布包。签名预览在临时目录操作：文档云盘为生成目录附加 FinderInfo 导致直接签名失败，重新复制本轮生成的 App 到独立临时目录后签名完整性检查通过；未移除已下载包或已安装应用的 quarantine，也未更改系统安全设置。
 
-当前构建产物命名为 `SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg`，附 `.sha256` 和 `.json` 清单。
+当前构建产物命名为 `SpaceJudge-0.5.4-10-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg`，附 `.sha256` 和 `.json` 清单。
 校验（在上述构建使用的同一源码版本运行）：
 
 ```sh
 bash scripts/release/verify-artifact.sh --mode experimental \
-  --dmg "$(pwd)/output/experimental-v0.5.3/SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg" \
-  --manifest "$(pwd)/output/experimental-v0.5.3/SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.json"
+  --dmg "$(pwd)/output/experimental-v0.5.4/SpaceJudge-0.5.4-10-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg" \
+  --manifest "$(pwd)/output/experimental-v0.5.4/SpaceJudge-0.5.4-10-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.json"
 ```
 
 清单的 `kind=experimental-adhoc`、`audience=opt-in-testers`、`distributionReady=false`、`notarizationStatus=not-submitted` 不可省略；源码须 clean、commit 要与 App 标记一致，CLI 和测试说明的 hash 须匹配。校验通过证明包内一致性与签名完整性，不证明恶意代码不存在，也不证明下载后 Gatekeeper 会放行。校验值不是可信来源以外的独立身份验证。
@@ -55,6 +55,10 @@ bash scripts/release/verify-artifact.sh --mode experimental \
 2026-10-05（北京时间）经用户“发布上去吧”授权，已发布 [v0.5.3 测试版](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.3)。从干净 commit `682bd11baa336fd577d1e54557fddbe337b352a6` 重建 universal App 与 CLI，tag 固定绑定此 commit。596 项 Swift 测试、146 项发布脚本检查、5 项引导检查通过；独立 experimental 包校验与实际 DMG 中 CLI 合成目录扫描、状态、子项、热点、问题及容量查询通过，合成文件哈希未变。四个附件先上传草稿，通过附件 API 下载逐项字节比对后公开为 Pre-release、`latest=false`；再通过无需登录的公开地址下载 DMG，SHA-256 为 `2ca26eddd6d8e6826537a1e5277ab8fc7f4b4179f604749f7982cd2d8b4278fe`，与本地包一致。仅上传 DMG、校验文件、manifest 与测试说明；图文引导随 DMG 提供。公开 v0.5.2 的 tag 和资产不变，本机已安装 App 与全局工具配置不变。尚未完成干净电脑 Gatekeeper、Intel 实机和完整外部 Codex 建议流程验收。产物及私有证据在忽略的 `output/experimental-v0.5.3-20261004/`、`output/v053-draft-download/` 和 `output/v053-public-download.dmg`；文件夹沿用构建开始时的日期。版本说明见 [v0.5.3 记录](../releases/v0.5.3.md)，main 后续文档提交不移动 tag。
 
 代码 SSH 推送权限不等于 Release API 上传权限。发布通过用户在 GitHub 网页批准的 GitHub CLI 授权完成，凭据存于系统 keyring，不写入仓库；本地发布工具与独立配置放在被忽略的 `output/release-tools/`。后续发布仍需检查授权账号和仓库权限，不在聊天、日志或提交中输出 Token。
+
+2026-10-12（北京时间）经用户确认“代码＋v0.5.4 测试版 DMG”，已发布 [v0.5.4](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.4)。0.5.4 / build 10 从干净 commit `86f3d3ac0467020722a7d94a6a3d7646fe254a44` 重建正常身份的 App 和 CLI，未启用独立诊断编译条件。604 项 Swift、146 项发布脚本、16 项采集工具测试（111 个断言）、5 项安装引导检查通过；独立 experimental 验证及实际 DMG 内 CLI 合成目录的扫描／查询通过，合成文件未改动。四个附件上传草稿后，通过认证资产 API 下载逐项比对，再公开为 Pre-release、`latest=false`，之后匿名下载 DMG 核对 SHA256 `df22effecd5586da0135c084133c84eb0979c8f747c8cace5bf3963ace55d59e`。两个旧版本的资产元数据前后相同，tag 不移动。
+
+公开前正常身份的本地候选人工安装及批准成功，具体证据见[启动诊断](startup-diagnostics.md)；这是不同字节的候选，不当作新公开包的首次安装验收，也不宣布永久修复。按用户要求，本机 App、自身缓存和偏好设置已移至可恢复备份，自身 TCC 重置，旧镜像退出；此轮公开包没有自动安装或启动，系统安全批准历史与原始证据保留。完整发布记录见 [v0.5.4](../releases/v0.5.4.md)。私密构建、测试、草稿下载、匿名下载、清理与诊断证据均在被忽略的 output 独立目录；本机路径、扫描库和日志不随附件上传。
 
 若有测试反馈，只提交系统版本、芯片、复现步骤和合成示例；截图/日志须先脱敏。
 

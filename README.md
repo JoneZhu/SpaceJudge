@@ -10,7 +10,7 @@
 
 [下载与版本](https://github.com/JoneZhu/SpaceJudge/releases) · [使用说明](docs/38-native-mvp-quickstart.md) · [问题反馈](https://github.com/JoneZhu/SpaceJudge/issues) · [工程文档](docs/README.md)
 
-> 当前版本：**v0.5.3，测试版，未经过 Apple 公证。**[直接下载 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.3/SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg) · [版本说明与校验文件](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.3)。版本号不加测试后缀；测试状态保留在下载页与安装引导中，不占用日常扫描界面。
+> 当前版本：**v0.5.4，测试版，未经过 Apple 公证。**[直接下载 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.4/SpaceJudge-0.5.4-10-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg) · [版本说明与校验文件](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.4)。版本号不加测试后缀；测试状态保留在下载页与安装引导中，不占用日常扫描界面。
 
 ## 一分钟视频上手
 
@@ -45,17 +45,17 @@ SpaceJudge 负责提供事实，用户和外部 Agent 决定如何处理。**软
 
 ### 安装测试版
 
-[中文图文安装与首次打开引导](App/SpaceJudgeApp/InstallationGuide.html)（下载 HTML 后可离线阅读）。v0.5.3 将同一引导放入 DMG，欢迎页及“帮助 → 安装与权限帮助”也可打开；旧 v0.5.2 包仍使用原有文字说明。
+[中文图文安装与首次打开引导](App/SpaceJudgeApp/InstallationGuide.html)（下载 HTML 后可离线阅读）。从 v0.5.3 起，同一引导放入 DMG，欢迎页及“帮助 → 安装与权限帮助”也可打开；旧 v0.5.2 包仍使用原有文字说明。
 
-[下载 v0.5.3 测试版 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.3/SpaceJudge-0.5.3-8-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg)。打开后先阅读 `安装与首次打开.html`，再把 `SpaceJudge.app` 拖入“应用程序”。更新前先退出旧版，建议保留旧应用副本。
+[下载 v0.5.4 测试版 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.4/SpaceJudge-0.5.4-10-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg)。打开后先阅读 `安装与首次打开.html`，再把 `SpaceJudge.app` 拖入“应用程序”。更新前先退出旧版，建议保留旧应用副本。
 
-[发布页的 Assets](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.3) 同时提供 SHA-256 校验文件、构建清单和测试说明。请选择 `.dmg` 安装包；`Source code` 压缩包是源码，不是应用。v0.5.3 四个上传附件已下载逐项比对，DMG 也已从无需登录的公开地址下载并核对校验值；这不等于完成其他 Mac 的安装验收。
+[发布页的 Assets](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.4) 同时提供 SHA-256 校验文件、构建清单和测试说明。请选择 `.dmg` 安装包；`Source code` 压缩包是源码，不是应用。v0.5.4 四个上传附件已下载逐项比对，DMG 也已从无需登录的公开地址下载并核对校验值；这不等于完成其他 Mac 的安装验收。
 
 当前测试包使用免费的本地签名，**不是 Developer ID 签名，也没有完成 Apple 公证**。首次打开可能被 macOS 拦截。仅在确认来源可信时，按 [Apple 的单应用批准说明](https://support.apple.com/102445) 在“系统设置 → 隐私与安全”中处理；受管理的电脑可能不允许安装。
 
 不需要关闭 Gatekeeper、关闭 SIP 或用命令移除隔离属性。签名和校验值用于检查完整性，不是安全性或可顺利安装的保证。未完成其他 Mac 的真实下载安装验收。
 
-如果安装后首次打开或点击“仍要打开”后仍无响应，请保留原安装包和现场，不要直接当作扫描权限不足。[启动诊断流程](docs/runbooks/startup-diagnostics.md)提供源码中的只读采集工具，能在 App 尚未打开时收集系统证据；启动埋点将随准备中的 v0.5.4 提供，旧 v0.5.3 包不包含埋点。这些诊断能力不代表系统授权挂起问题已永久修复。原始诊断日志可能含隐私信息，不要直接公开上传。
+如果安装后首次打开或点击“仍要打开”后仍无响应，请保留原安装包和现场，不要直接当作扫描权限不足。[启动诊断流程](docs/runbooks/startup-diagnostics.md)提供源码中的只读采集工具，能在 App 尚未打开时收集系统证据；v0.5.4 包含启动埋点，旧 v0.5.3 包不包含。这些诊断能力不代表系统授权挂起问题已永久修复。原始诊断日志可能含隐私信息，不要直接公开上传。
 
 ## 用一分钟上手
 
