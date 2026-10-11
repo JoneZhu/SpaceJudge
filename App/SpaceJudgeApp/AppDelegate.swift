@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private var scanMenuItems: (choose: NSMenuItem, rescan: NSMenuItem)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        StartupDiagnostics.shared.record(.appDidFinishLaunching)
         #if DEBUG
         applyDebugSeams()
         #endif
@@ -119,13 +120,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     /// rejects every call while one bootstrap is already running.
     func retryBootstrap() async {
         guard model == nil, !isTerminating, !bootstrapGate.isRunning else { return }
+        StartupDiagnostics.shared.record(.retryRequested)
         // Replace the stale failure with a preparing state immediately.
         bootstrapError = nil
         await bootstrap()
     }
 
     private func bootstrap() async {
-        guard bootstrapGate.begin() else { return }
+        guard bootstrapGate.begin() else {
+            StartupDiagnostics.shared.record(.bootstrapAlreadyRunning)
+            return
+        }
+        StartupDiagnostics.shared.record(.bootstrapStarted)
         isBootstrapping = true
         defer {
             isBootstrapping = false
@@ -136,6 +142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             // A result that arrives after termination must not resurrect the
             // app: close the late connections and drop it.
             guard !isTerminating else {
+                StartupDiagnostics.shared.record(.bootstrapDiscarded)
                 await repositories.reader.close()
                 await repositories.writer.close()
                 return
@@ -174,6 +181,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             self.model = model
             self.observeCommandPolicy(model)
             self.bootstrapError = nil
+            StartupDiagnostics.shared.record(.modelReady)
 #if DEBUG
             // Pi-only smoke seam paired with `SPACEJUDGE_TEST_ROOT_PATH`.
             if ProcessInfo.processInfo.environment["SPACEJUDGE_TEST_ROOT_PATH"]?.hasPrefix("/") == true {
@@ -181,6 +189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             }
 #endif
         } catch {
+            StartupDiagnostics.shared.record(.bootstrapFailed, error: error)
             if !isTerminating {
                 self.bootstrapError = "无法准备本地快照数据库。请重新启动应用；如仍然失败，请联系支持。"
             }
@@ -188,12 +197,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        StartupDiagnostics.shared.record(.terminationRequested)
         isTerminating = true
         guard let model else { return .terminateNow }
         if shutdownRequested { return .terminateLater }
         shutdownRequested = true
         Task { @MainActor in
             await model.shutdown()
+            StartupDiagnostics.shared.record(.shutdownCompleted)
             NSApp.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
@@ -338,18 +349,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     private static func bootstrapRepositories() async throws -> Repositories {
         let workspace = try workspace()
+        StartupDiagnostics.shared.record(.workspaceResolved)
         let path = workspace.databaseURL.path
         return try await Task.detached(priority: .userInitiated) {
+            StartupDiagnostics.shared.record(.workspacePrepareStarted)
             // Startup cleanup touches only SpaceJudge-managed members.
             try workspace.prepare()
+            StartupDiagnostics.shared.record(.workspacePrepared)
             // Pre-create the WAL/SHM as 0600 so SQLite adopts owner-only files
             // instead of creating them with the process default mode.
             try workspace.prepareDatabaseFiles()
+            StartupDiagnostics.shared.record(.databaseFilesPrepared)
+            StartupDiagnostics.shared.record(.writerOpenStarted)
             let writer = try SQLiteSnapshotRepository(path: path, maximumRetainedScans: 2)
+            StartupDiagnostics.shared.record(.writerOpened)
             do {
+                StartupDiagnostics.shared.record(.readerOpenStarted)
                 let reader = try SQLiteSnapshotRepository.openReadOnly(path: path)
+                StartupDiagnostics.shared.record(.readerOpened)
                 // Safety net for any file (re)created during open.
                 try workspace.tightenDatabaseFilePermissions()
+                StartupDiagnostics.shared.record(.repositoriesReady)
                 return Repositories(writer: writer, reader: reader, workspace: workspace)
             } catch {
                 await writer.close()
@@ -360,6 +380,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     /// Normal user workspace under Foundation's `Caches/SpaceJudge`, with a
     /// DEBUG-only override used by the task's manual end-to-end smoke test.
+    /// The separate SPACEJUDGE_LAUNCH_CONTROL diagnostic build uses a validated,
+    /// identity-specific sibling instead; it cannot fall back to the live cache.
     ///
     /// `SPACEJUDGE_TEST_DATABASE_PATH` is ignored in Release. In Debug it must
     /// be an absolute path ending in `.sqlite`; anything else refuses to launch
@@ -367,6 +389,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     /// controls that named database; cleanup still never removes its parent
     /// directory.
     private static func workspace() throws -> SnapshotWorkspace {
+        #if SPACEJUDGE_LAUNCH_CONTROL
+        // Only the dedicated diagnostic builder enables this condition.
+        // A wrong bundle identity refuses bootstrap; never touch the real cache.
+        guard let identifier = Bundle.main.bundleIdentifier else {
+            throw SnapshotWorkspaceError.workspaceUnavailable
+        }
+        let caches = try FileManager.default.url(
+            for: .cachesDirectory, in: .userDomainMask,
+            appropriateFor: nil, create: true
+        )
+        return try SnapshotWorkspace.launchControl(bundleIdentifier: identifier, cachesDirectory: caches)
+        #else
         #if DEBUG
         if let raw = ProcessInfo.processInfo.environment["SPACEJUDGE_TEST_DATABASE_PATH"] {
             guard raw.hasPrefix("/"), raw.hasSuffix(".sqlite") else {
@@ -376,6 +410,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         }
         #endif
         return try SnapshotWorkspace.production()
+        #endif
     }
 
     private enum BootstrapError: Error {

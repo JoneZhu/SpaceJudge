@@ -10,7 +10,16 @@ import SpaceJudgeAppSupport
 /// SwiftUI `.commands` builder: the enablement depends on the `@Observable`
 /// model, and AppKit `validateMenuItem` makes the menu item state a reliable,
 /// observable function of the shared `AppCommandPolicy`.
+/// First Swift statement, before constructing the SwiftUI app/delegate.
+/// System policy can suspend execution even before this marker.
 @main
+enum SpaceJudgeEntryPoint {
+    static func main() {
+        StartupDiagnostics.shared.record(.processEntry)
+        SpaceJudgeApp.main()
+    }
+}
+
 struct SpaceJudgeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
@@ -73,5 +82,6 @@ struct RootView: View {
                 .frame(minWidth: 480, minHeight: 360)
             }
         }
+        .onAppear { StartupDiagnostics.shared.record(.rootViewAppeared) }
     }
 }

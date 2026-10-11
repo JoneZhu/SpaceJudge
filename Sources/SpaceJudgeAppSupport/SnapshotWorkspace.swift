@@ -60,6 +60,25 @@ public struct SnapshotWorkspace: Sendable, Equatable {
         )
     }
 
+    /// Pure path mapping for the separately compiled launch-control app.
+    /// Never used by the ordinary Release app. Reject a production/malformed
+    /// identity instead of falling back to its live cache. Performs no I/O.
+    public static func launchControl(bundleIdentifier: String, cachesDirectory: URL) throws -> SnapshotWorkspace {
+        let prefix = "com.hongdazhu.SpaceJudgeLaunchControl.r"
+        guard bundleIdentifier.hasPrefix(prefix), cachesDirectory.isFileURL,
+              cachesDirectory.path.hasPrefix("/") else {
+            throw SnapshotWorkspaceError.workspaceUnavailable
+        }
+        let token = String(bundleIdentifier.dropFirst(prefix.count))
+        guard token.utf8.count == 12,
+              token.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else {
+            throw SnapshotWorkspaceError.workspaceUnavailable
+        }
+        return SnapshotWorkspace(rootURL: cachesDirectory.appendingPathComponent(
+            "SpaceJudgeLaunchControl-" + token, isDirectory: true
+        ))
+    }
+
     /// Debug-only workspace for an explicit test database path. The override
     /// controls one database; cleanup still only touches that exact file, its
     /// `-wal`/`-shm` and managed spool files in the sibling `spool` directory.
