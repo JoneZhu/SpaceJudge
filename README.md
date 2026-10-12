@@ -12,6 +12,8 @@
 
 > 当前版本：**v0.5.4，测试版，未经过 Apple 公证。**[直接下载 DMG](https://github.com/JoneZhu/SpaceJudge/releases/download/v0.5.4/SpaceJudge-0.5.4-10-universal-EXPERIMENTAL-ADHOC-NOT-NOTARIZED.dmg) · [版本说明与校验文件](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.4)。版本号不加测试后缀；测试状态保留在下载页与安装引导中，不占用日常扫描界面。
 
+v0.5.4 之前的 GitHub 测试版已撤回，旧 Release、安装附件及远端标签已删除，旧下载链接不再有效。请使用上面的 v0.5.4 下载入口；仓库内旧版本文档仅保留为历史记录。
+
 ## 一分钟视频上手
 
 ![SpaceJudge 操作演示：选择范围、查看空间图、双击进入目录、准备 Codex 草稿、刷新占用](docs/assets/spacejudge-quickstart.gif)

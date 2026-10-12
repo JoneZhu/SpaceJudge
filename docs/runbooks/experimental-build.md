@@ -62,4 +62,6 @@ bash scripts/release/verify-artifact.sh --mode experimental \
 
 若有测试反馈，只提交系统版本、芯片、复现步骤和合成示例；截图/日志须先脱敏。
 
+2026-10-12 发布后的撤回决策：按维护者要求删除 v0.5.4 之前的所有 GitHub 版本，经盘点实际为 v0.5.2、v0.5.3。两份 Release、八个附件和远端标签已删除，v0.5.4 的安装附件与 tag 不变；删除前完整元数据及附件均保存本机私密备份，哈希与 GitHub digest 一致。上文旧版本“已公开”“保留”指历史时刻，不表示当前仍可下载。旧版本文档保留为历史记录；不要把本地备份或保留的旧标签再次整体上传。源码提交历史没有重写。本版真实 GitHub 包后续本机授权启动成功，其他 Mac／Intel 与永久修复仍未验证。
+
 正式对外推广时仍需要 Developer ID + 公证，以及真实下载来源下的 Gatekeeper、Intel/Apple Silicon 安装验收，见[正式发布流程](direct-release.md)。

@@ -6,7 +6,7 @@
 
 ## 当前基线
 
-- 开源与分发：MIT 源码＋自愿参与的未公证测试版；[v0.5.4](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.4) 已公开提供含启动埋点和离线安装引导的 DMG，发布记录见[版本说明](releases/v0.5.4.md)，旧版本及资产保留。构建、校验和安装边界见[实验性测试包](runbooks/experimental-build.md)。正式公证发行仍未完成。
+- 开源与分发：MIT 源码＋自愿参与的未公证测试版；[v0.5.4](https://github.com/JoneZhu/SpaceJudge/releases/tag/v0.5.4) 已公开提供含启动埋点和离线安装引导的 DMG，发布记录见[版本说明](releases/v0.5.4.md)。2026-10-12 按用户要求撤回所有更早的 GitHub Release、附件和远端标签；旧版本文档与本机备份保留为历史。构建、校验和安装边界见[实验性测试包](runbooks/experimental-build.md)。正式公证发行仍未完成。
 
 - 产品：macOS 只读磁盘空间浏览器，不包含清理执行；0.5.1 增加用户明确确认的外部 Codex 桌面草稿交接，没有内置模型会话。
 - 核心体验：快速得到可用结果、按面积浏览、单击展开、双击进入、面包屑返回。
