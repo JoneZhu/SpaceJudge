@@ -2,6 +2,18 @@
 
 核对日期：2026-09-27。
 
+## 产品与交互灵感
+
+本节核对日期：2026-10-12；不代表下方技术参考在同日重新核对。
+
+- [SpaceSniffer 官方介绍](https://www.uderzo.it/main_products/space_sniffer/)：面积表示文件和目录大小，单击在原位展开、双击放大到当前视图，是 SpaceJudge 嵌套空间图和目录浏览的主要交互灵感。
+- [SpaceSniffer 官方功能说明](https://www.uderzo.it/main_products/space_sniffer/features.html)：支持扫描中浏览、右键文件操作等。这里只记录设计参考，不代表 SpaceJudge 已实现原作的全部功能；例如 SpaceJudge 当前没有实时文件系统变化监听。
+- [SpaceSniffer 官方下载页](https://www.uderzo.it/main_products/space_sniffer/download.html)及其链接的 [dAppCDN 分发页](https://dappcdn.com/download/disk-analyzers/spacesniffer)：核对时提供 Windows 版，没有原生 macOS 安装包；面向用户介绍时使用“受 SpaceSniffer 启发的 macOS 原生工具”，不使用“官方 Mac 版”或“源码移植版”。
+- [redtrillix/SpaceSniffer 仓库声明](https://github.com/redtrillix/SpaceSniffer)：明确标注为从官网取得二进制的非官方存档，不是原作源码仓库，不作为 SpaceJudge 的源码来源或官方关联依据。
+- [GrandPerspective 官网](https://grandperspectiv.sourceforge.net/)：macOS 磁盘占用面积图工具，带来了本项目最初的可视化灵感。作者对目录清晰度和浏览流畅性的诉求是项目起因，不是跨工具性能评测。
+
+对外定位与致谢以 [README](../README.md#灵感与致谢) 为准。SpaceJudge 是独立开发的项目，与上述原作没有隶属或合作关系；未经同条件基准验证，不宣称扫描速度领先。
+
 ## Apple / Darwin
 
 - `man 2 getattrlistbulk`：批量枚举目录属性；要求 `ATTR_CMN_NAME` 与 `ATTR_CMN_RETURNED_ATTRS`，条目顺序未定义；mount point 在 `ATTR_DIR_MOUNTSTATUS` 中带 `DIR_MNTSTATUS_MNTPOINT`（`0x00000001`），firmlink 在 `ATTR_CMN_FLAGS` 中带 `SF_FIRMLINK`（`0x00800000`），bulk 返回的是这两个目录项自身而非穿越后的目标属性。

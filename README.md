@@ -4,9 +4,13 @@
 
 # SpaceJudge
 
-空间，一眼看清。一个原生、只读、开源的 macOS 磁盘空间浏览器。
+**喜欢 SpaceSniffer，但你用的是 Mac？**
 
-用方块的面积看懂文件和目录占用了多少空间，逐层找到大目录；需要清理建议时，把你选中的范围交给已有的 Codex 桌面应用，先分析，再决定怎么处理。
+SpaceJudge 是一款受 [SpaceSniffer](https://www.uderzo.it/main_products/space_sniffer/) 启发、为 macOS 原生开发的只读、开源磁盘空间浏览器。
+
+空间，一眼看清。用方块的面积看懂文件和目录占用了多少空间：方块越大，占用越大；单击展开、双击进入，边扫描边查看，逐层找到大目录。
+
+清晰的目录层级、低饱和度配色和自适应细节显示，让大量小项目不至于淹没重点。需要进一步理解怎么清理时，可以把选中的范围交给已有的 Codex 桌面应用，或通过 CLI / 可选 MCP 向 Agent 提供占用数据：先分析，再决定怎么处理。**SpaceJudge 本身不删除文件，也不执行自动清理。**
 
 [下载与版本](https://github.com/JoneZhu/SpaceJudge/releases) · [使用说明](docs/38-native-mvp-quickstart.md) · [问题反馈](https://github.com/JoneZhu/SpaceJudge/issues) · [工程文档](docs/README.md)
 
@@ -230,6 +234,16 @@ node --test scripts/release/installation-guide.test.mjs
 不要上传凭据、原始扫描数据库、个人文件清单或未经检查的完整日志。
 
 工程设计、数据口径和验收记录见 [文档目录](docs/README.md)。早期交互原型保留在 `index.html`、`index-v2.html`、`index-v1.html`，仅展示固定示例，不读取磁盘，也不能作为原生性能证明。
+
+## 灵感与致谢
+
+SpaceJudge 始于作者自己的 Mac 磁盘空间不足问题。最初的灵感来自 [GrandPerspective](https://grandperspectiv.sourceforge.net/)：面积图让空间占用变得直观；实际使用中，作者希望目录层级更清晰、浏览过程更顺畅，于是开始制作适合自己操作习惯的工具。这是个人使用体验，不是对其他工具的普遍性能判断。
+
+可视化与交互设计主要参考作者喜欢的 [SpaceSniffer](https://www.uderzo.it/main_products/space_sniffer/)：嵌套目录、面积表示占用、单击展开、双击进入，以及扫描过程中继续浏览。SpaceSniffer 面向 Windows；SpaceJudge 希望把这种熟悉的浏览方式带到 macOS，同时采用原生界面、克制的配色，并提供 CLI、MCP 和 Codex 上下文交接能力。感谢这些工具带来的启发。
+
+SpaceJudge 是独立开发的项目，不是 SpaceSniffer 的官方 macOS 版，也不是其源码的移植，与原作没有隶属或合作关系。两者功能并不完全相同，例如 SpaceJudge 当前通过手动刷新重新扫描，不提供实时文件系统变化监听；本项目也没有同条件基准证明比其他工具扫描更快。
+
+原作介绍与下载请访问 [SpaceSniffer 官网](https://www.uderzo.it/main_products/space_sniffer/)。`redtrillix/SpaceSniffer` 仓库自行声明为非官方二进制存档，不是原作源码仓库，不作为本项目的源码或官方归属依据。来源核对见 [产品与交互参考](docs/references.md#产品与交互灵感)。
 
 ## 许可证
 
